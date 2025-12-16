@@ -22,30 +22,24 @@ for _ in range(40):
 ripples = [[random.randint(0, WIDTH), random.randint(180, 470), random.uniform(0.5, 1.5)] for _ in range(12)]
 
 def draw_river_environment():
-    # 1. Basis Gras
     screen.fill((34, 139, 34)) 
-    
-    # 2. Gras Textuur
     for tx, ty in grass_texture:
         pygame.draw.line(screen, (25, 100, 25), (tx, ty), (tx, ty + 4), 1)
     
-    # 3. De Rivier (Gecentreerd)
     water_color = (60, 160, 210)
     pygame.draw.rect(screen, water_color, (0, 160, WIDTH, 330))
-    
-    # 4. Modder oevers
     pygame.draw.rect(screen, (100, 70, 40), (0, 155, WIDTH, 8)) 
     pygame.draw.rect(screen, (100, 70, 40), (0, 485, WIDTH, 8)) 
 
-    # 5. Water rimpelingen
     for r in ripples:
         r[0] -= r[2] 
         if r[0] < -50: r[0] = WIDTH + 50
         pygame.draw.line(screen, (100, 190, 230), (r[0], r[1]), (r[0]+30, r[1]), 2)
 
 def draw_lilypad_img(x, y):
-    # Lilypad blitten (solide, geen transparantie)
-    screen.blit(lilypad_img, (x - 10, y + 55))
+    # Lilypad gecentreerd onder de kikker (x is start kikker, kikker breedte is 85)
+    # Lilypad breedte is nu 85, dus blitten op exact dezelfde x
+    screen.blit(lilypad_img, (x, y + 60))
 
 def draw_glow_title(text, pos):
     for off in range(5, 0, -1):
@@ -73,18 +67,18 @@ except:
     pygame.draw.ellipse(frog_orig, (34, 139, 34), (5, 20, 75, 60))
 
 try:
-    # Laad de Lilypad
+    # Kleiner formaat: 85x40
     lilypad_img = pygame.image.load("assets/lilypad.png").convert_alpha()
-    lilypad_img = pygame.transform.smoothscale(lilypad_img, (110, 50))
+    lilypad_img = pygame.transform.smoothscale(lilypad_img, (85, 40))
     
-    # LICHTGROENE TINT toevoegen
-    # We maken een overlay die de afbeelding lichter en groener maakt
-    light_tint = pygame.Surface(lilypad_img.get_size(), pygame.SRCALPHA)
-    light_tint.fill((100, 255, 100, 40)) # Lichtgroen met lage opacity
-    lilypad_img.blit(light_tint, (0,0), special_flags=pygame.BLEND_RGBA_ADD)
+    # DONKERGROENE TINT (MULT ipv ADD voorkomt witte gloed)
+    tint = pygame.Surface(lilypad_img.get_size(), pygame.SRCALPHA)
+    # Gebruik een kleur tussen 150-200 voor een "iets donkerder" effect
+    tint.fill((180, 255, 180, 255)) 
+    lilypad_img.blit(tint, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
 except:
-    lilypad_img = pygame.Surface((110, 50), pygame.SRCALPHA)
-    pygame.draw.ellipse(lilypad_img, (144, 238, 144), (0, 0, 110, 50)) # Lichtgroen fallback
+    lilypad_img = pygame.Surface((85, 40), pygame.SRCALPHA)
+    pygame.draw.ellipse(lilypad_img, (34, 100, 34), (0, 0, 85, 40)) 
 
 frog_colors = [(0,0,0), (120,0,0), (0,0,120), (120,120,0), (120,0,120)]
 frogs = []
@@ -122,11 +116,12 @@ while running:
         else:
             jump_offsets[i] = 0
 
-        # Teken de lichtgroene Lilypad
+        # Teken lilypad
         draw_lilypad_img(x, y)
         
         curr_y = y + jump_offsets[i]
         
+        # Glow bij hover
         if frog_rect.collidepoint(mouse_pos):
             mask = pygame.mask.from_surface(frog)
             glow = mask.to_surface(setcolor=(255, 255, 255, 120), unsetcolor=(0,0,0,0))
