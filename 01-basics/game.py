@@ -42,7 +42,7 @@ try:
         pygame.image.load("assets/clover.png").convert_alpha(), (26, 26)
     )
     tint = pygame.Surface(clover_img.get_size(), pygame.SRCALPHA)
-    tint.fill((0, 220, 0, 255))  # lucky groen
+    tint.fill((0, 220, 0, 255))
     clover_img.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 except:
     clover_img = pygame.Surface((26, 26), pygame.SRCALPHA)
@@ -84,7 +84,7 @@ class Frog:
         if keys[pygame.K_RIGHT]:
             self.x += MOVE_SPEED
 
-        # wrap zoals Doodle Jump
+        # wrap
         if self.x < RIVER_X - 30:
             self.x = RIVER_X + RIVER_W - 20
         if self.x > RIVER_X + RIVER_W - 20:
@@ -98,7 +98,6 @@ class Frog:
 
         frog_rect = pygame.Rect(self.x, self.y, 50, 50)
 
-        # landen
         if self.vel_y > 0:
             for p in platforms:
                 if frog_rect.colliderect(p.rect()):
@@ -107,7 +106,6 @@ class Frog:
                         self.vel_y = JUMP_POWER
                         break
 
-        # camera scroll
         if self.y < SCROLL_THRESHOLD:
             SCROLL_SPEED = SCROLL_THRESHOLD - self.y
             self.y = SCROLL_THRESHOLD
@@ -134,11 +132,19 @@ def draw_background(bridge_y, ripple_offset, bushes):
     pygame.draw.rect(screen, (100,70,40), (RIVER_X-8, 0, 8, HEIGHT))
     pygame.draw.rect(screen, (100,70,40), (RIVER_X+RIVER_W, 0, 8, HEIGHT))
 
-    if bridge_y < HEIGHT:
-        pygame.draw.rect(screen, (120,80,40), (0, bridge_y, WIDTH, BRIDGE_HEIGHT))
-
     for bush in bushes:
         screen.blit(bush[0], (bush[1], bush[2]))
+
+# =====================
+# 👉 NIEUWE BRUG (ENKEL VISUEEL)
+# =====================
+def draw_bottom_bridge():
+    y = HEIGHT - BRIDGE_HEIGHT
+    pygame.draw.rect(screen, (120, 80, 40), (0, y, WIDTH, BRIDGE_HEIGHT))
+    for x in range(0, WIDTH, 40):
+        pygame.draw.rect(screen, (100, 65, 35),
+                         (x + 5, y + 10, 30, BRIDGE_HEIGHT - 20))
+    pygame.draw.rect(screen, (80, 50, 25), (0, y, WIDTH, 6))
 
 # =====================
 # SETUP
@@ -196,7 +202,6 @@ while True:
             y = min(p.y for p in platforms) - random.randint(70, 100)
             platforms.append(Lilypad(x, y))
 
-        # 🌊 water = leven kwijt
         if frog.y > HEIGHT:
             lives -= 1
             if lives <= 0:
@@ -210,9 +215,11 @@ while True:
         p.draw()
     frog.draw()
 
-    # 🍀 levens tekenen
     for i in range(lives):
         screen.blit(clover_img, (10 + i * 30, 10))
+
+    # ✅ BRUG ALS LAATSTE → alles stroomt eronder
+    draw_bottom_bridge()
 
     if game_over:
         txt = font_big.render("GAME OVER", True, (255,255,255))
