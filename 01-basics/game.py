@@ -36,21 +36,24 @@ lilypad_img = pygame.transform.smoothscale(
 )
 bush_img_orig = pygame.image.load("assets/bushes.png").convert_alpha()
 
-# 🍀 klavertje
+# 🍀 GROEN KLAVERTJE
 try:
     clover_img = pygame.transform.smoothscale(
         pygame.image.load("assets/clover.png").convert_alpha(), (26, 26)
     )
+    tint = pygame.Surface(clover_img.get_size(), pygame.SRCALPHA)
+    tint.fill((0, 220, 0, 255))  # lucky groen
+    clover_img.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 except:
-    # fallback klavertje (getekend)
-    clover_img = pygame.Surface((26,26), pygame.SRCALPHA)
-    pygame.draw.circle(clover_img, (0,200,0), (13,7), 6)
-    pygame.draw.circle(clover_img, (0,200,0), (7,13), 6)
-    pygame.draw.circle(clover_img, (0,200,0), (19,13), 6)
-    pygame.draw.circle(clover_img, (0,200,0), (13,19), 6)
+    clover_img = pygame.Surface((26, 26), pygame.SRCALPHA)
+    GREEN = (0, 220, 0)
+    pygame.draw.circle(clover_img, GREEN, (13, 7), 6)
+    pygame.draw.circle(clover_img, GREEN, (7, 13), 6)
+    pygame.draw.circle(clover_img, GREEN, (19, 13), 6)
+    pygame.draw.circle(clover_img, GREEN, (13, 19), 6)
 
 # =====================
-# PLATFORM
+# LILYPAD
 # =====================
 class Lilypad:
     def __init__(self, x, y):
@@ -95,6 +98,7 @@ class Frog:
 
         frog_rect = pygame.Rect(self.x, self.y, 50, 50)
 
+        # landen
         if self.vel_y > 0:
             for p in platforms:
                 if frog_rect.colliderect(p.rect()):
@@ -103,6 +107,7 @@ class Frog:
                         self.vel_y = JUMP_POWER
                         break
 
+        # camera scroll
         if self.y < SCROLL_THRESHOLD:
             SCROLL_SPEED = SCROLL_THRESHOLD - self.y
             self.y = SCROLL_THRESHOLD
@@ -113,7 +118,7 @@ class Frog:
         screen.blit(frog_img, (self.x, self.y))
 
 # =====================
-# ACHTERGROND (ONGEWIJZIGD)
+# ACHTERGROND (NIET AANRAKEN)
 # =====================
 def draw_background(bridge_y, ripple_offset, bushes):
     screen.fill((34,139,34))
@@ -191,7 +196,7 @@ while True:
             y = min(p.y for p in platforms) - random.randint(70, 100)
             platforms.append(Lilypad(x, y))
 
-        # 🌊 in water gevallen
+        # 🌊 water = leven kwijt
         if frog.y > HEIGHT:
             lives -= 1
             if lives <= 0:
@@ -200,6 +205,7 @@ while True:
                 frog.reset()
 
     draw_background(bridge_y, ripple_offset, bushes)
+
     for p in platforms:
         p.draw()
     frog.draw()
