@@ -14,52 +14,32 @@ pixel_font = pygame.font.SysFont("Courier New", 42, bold=True)
 button_font = pygame.font.SysFont("Courier New", 20, bold=True)
 
 # --- TEXTUUR DATA ---
-# Genereer vaste posities voor de gras-textuur (bovenaan en onderaan)
 grass_texture = []
 for _ in range(40):
-    grass_texture.append((random.randint(0, WIDTH), random.randint(0, 110)))   # Bovenkant
-    grass_texture.append((random.randint(0, WIDTH), random.randint(370, 480))) # Onderkant
+    grass_texture.append((random.randint(0, WIDTH), random.randint(0, 150)))   
+    grass_texture.append((random.randint(0, WIDTH), random.randint(500, HEIGHT))) 
 
-# Water animatie details
-ripples = [[random.randint(0, WIDTH), random.randint(140, 340), random.uniform(0.5, 1.5)] for _ in range(10)]
+ripples = [[random.randint(0, WIDTH), random.randint(180, 470), random.uniform(0.5, 1.5)] for _ in range(12)]
 
 def draw_river_environment():
-    # 1. Basis Gras (Land)
     screen.fill((34, 139, 34)) 
-    
-    # 2. Gras Textuur (kleine donkere sprietjes)
     for tx, ty in grass_texture:
         pygame.draw.line(screen, (25, 100, 25), (tx, ty), (tx, ty + 4), 1)
-        pygame.draw.line(screen, (25, 100, 25), (tx + 2, ty + 1), (tx + 2, ty + 5), 1)
     
-    # 3. De Rivier
     water_color = (60, 160, 210)
-    pygame.draw.rect(screen, water_color, (0, 120, WIDTH, 240))
-    
-    # 4. Rivier randjes (modder/oever)
-    pygame.draw.rect(screen, (100, 70, 40), (0, 115, WIDTH, 8)) 
-    pygame.draw.rect(screen, (100, 70, 40), (0, 357, WIDTH, 8)) 
+    pygame.draw.rect(screen, water_color, (0, 160, WIDTH, 330))
+    pygame.draw.rect(screen, (100, 70, 40), (0, 155, WIDTH, 8)) 
+    pygame.draw.rect(screen, (100, 70, 40), (0, 485, WIDTH, 8)) 
 
-    # 5. Water rimpelingen & Textuur
     for r in ripples:
         r[0] -= r[2] 
         if r[0] < -50: r[0] = WIDTH + 50
-        # Lichtblauwe schittering
         pygame.draw.line(screen, (100, 190, 230), (r[0], r[1]), (r[0]+30, r[1]), 2)
-        # Donkere diepte-lijn voor meer water-textuur
-        pygame.draw.line(screen, (50, 140, 190), (r[0]-10, r[1]+3), (r[0]+20, r[1]+3), 1)
 
-def draw_lilypad(x, y):
-    w, h = 100, 35
-    pad_rect = pygame.Rect(x-5, y+60, w, h)
-    water_color = (60, 160, 210)
-    
-    pygame.draw.ellipse(screen, (20, 70, 30), pad_rect) 
-    pygame.draw.ellipse(screen, (45, 180, 90), (pad_rect.x+2, pad_rect.y+2, w-4, h-4)) 
-    
-    center = pad_rect.center
-    pts = [center, (pad_rect.right + 10, pad_rect.top - 5), (pad_rect.right + 10, pad_rect.bottom + 5)]
-    pygame.draw.polygon(screen, water_color, pts)
+def draw_lilypad_img(x, y):
+    # Lilypad gecentreerd onder de kikker (x is start kikker, kikker breedte is 85)
+    # Lilypad breedte is nu 85, dus blitten op exact dezelfde x
+    screen.blit(lilypad_img, (x, y + 60))
 
 def draw_glow_title(text, pos):
     for off in range(5, 0, -1):
@@ -73,20 +53,32 @@ def draw_button(x, y, label, mouse_pos):
     rect = pygame.Rect(x, y, 110, 45)
     is_hovered = rect.collidepoint(mouse_pos)
     color = (40, 100, 60) if not is_hovered else (60, 150, 80) 
-    
     pygame.draw.rect(screen, (20, 50, 30), (x+3, y+3, 110, 45), border_radius=10) 
     pygame.draw.rect(screen, color, rect, border_radius=10)
-    
     txt = button_font.render(label, True, (255, 255, 255))
     screen.blit(txt, txt.get_rect(center=rect.center))
 
-# Kikkers laden
+# --- ASSETS LADEN ---
 try:
     frog_orig = pygame.image.load("assets/frog.png").convert_alpha()
     frog_orig = pygame.transform.smoothscale(frog_orig, (85, 85))
 except:
     frog_orig = pygame.Surface((85, 85), pygame.SRCALPHA)
     pygame.draw.ellipse(frog_orig, (34, 139, 34), (5, 20, 75, 60))
+
+try:
+    # Kleiner formaat: 85x40
+    lilypad_img = pygame.image.load("assets/lilypad.png").convert_alpha()
+    lilypad_img = pygame.transform.smoothscale(lilypad_img, (85, 40))
+    
+    # DONKERGROENE TINT (MULT ipv ADD voorkomt witte gloed)
+    tint = pygame.Surface(lilypad_img.get_size(), pygame.SRCALPHA)
+    # Gebruik een kleur tussen 150-200 voor een "iets donkerder" effect
+    tint.fill((180, 255, 180, 255)) 
+    lilypad_img.blit(tint, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
+except:
+    lilypad_img = pygame.Surface((85, 40), pygame.SRCALPHA)
+    pygame.draw.ellipse(lilypad_img, (34, 100, 34), (0, 0, 85, 40)) 
 
 frog_colors = [(0,0,0), (120,0,0), (0,0,120), (120,120,0), (120,0,120)]
 frogs = []
@@ -97,7 +89,7 @@ for c in frog_colors:
     f.blit(tint, (0,0), special_flags=pygame.BLEND_RGBA_ADD)
     frogs.append(f)
 
-positions = [(40 + i*105, 190) for i in range(len(frogs))]
+positions = [(40 + i*105, 260) for i in range(len(frogs))]
 jump_offsets = [0] * 5
 jump_frames = [0] * 5
 
@@ -109,7 +101,7 @@ while running:
         if event.type == pygame.QUIT: running = False
 
     draw_river_environment()
-    draw_glow_title("Select your frog", (110, 40))
+    draw_glow_title("Select your frog", (110, 70))
 
     for i, frog in enumerate(frogs):
         x, y = positions[i]
@@ -119,14 +111,17 @@ while running:
             if jump_frames[i] == 0: jump_frames[i] = 10
         
         if jump_frames[i] > 0:
-            jump_offsets[i] = -35 * math.sin(math.pi * (10 - jump_frames[i]) / 10)
+            jump_offsets[i] = -40 * math.sin(math.pi * (10 - jump_frames[i]) / 10)
             jump_frames[i] -= 1
         else:
             jump_offsets[i] = 0
 
-        draw_lilypad(x, y)
+        # Teken lilypad
+        draw_lilypad_img(x, y)
+        
         curr_y = y + jump_offsets[i]
         
+        # Glow bij hover
         if frog_rect.collidepoint(mouse_pos):
             mask = pygame.mask.from_surface(frog)
             glow = mask.to_surface(setcolor=(255, 255, 255, 120), unsetcolor=(0,0,0,0))
@@ -136,8 +131,8 @@ while running:
 
         screen.blit(frog, (x, curr_y))
 
-    draw_button(25, 400, "BACK", mouse_pos)
-    draw_button(465, 400, "NEXT", mouse_pos)
+    draw_button(40, 550, "BACK", mouse_pos)
+    draw_button(450, 550, "NEXT", mouse_pos)
     
     pygame.display.flip()
     clock.tick(60)
