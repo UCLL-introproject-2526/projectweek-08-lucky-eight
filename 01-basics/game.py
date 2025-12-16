@@ -5,63 +5,63 @@ import sys
 pygame.init()
 WIDTH, HEIGHT = 600, 650
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Lucky Jump")
+pygame.display.set_caption("Lucky Frog Jump 🐸")
 clock = pygame.time.Clock()
 FPS = 60
 
 # =====================
 # CONSTANTEN
 # =====================
-RIVER_W = 300                 # bredere rivier
-RIVER_X = WIDTH//2 - RIVER_W//2
-LOG_SPACING = 110
+RIVER_W = 300
+RIVER_X = WIDTH // 2 - RIVER_W // 2
 BRIDGE_HEIGHT = 60
-CURRENT_SPEED = 0.8            # stroming
+
+GRAVITY = 0.6
+JUMP_POWER = -14
+MOVE_SPEED = 5
+
+SCROLL_THRESHOLD = HEIGHT // 3
+SCROLL_SPEED = 0
+
+MAX_LIVES = 5
 
 # =====================
 # ASSETS
 # =====================
-try:
-    frog_img = pygame.image.load("assets/frog.png").convert_alpha()
-    frog_img = pygame.transform.smoothscale(frog_img, (50, 50))
-except:
-    frog_img = pygame.Surface((50,50), pygame.SRCALPHA)
-    pygame.draw.ellipse(frog_img, (50,205,50), (0,0,50,50))
+frog_img = pygame.transform.smoothscale(
+    pygame.image.load("assets/frog.png").convert_alpha(), (50, 50)
+)
+lilypad_img = pygame.transform.smoothscale(
+    pygame.image.load("assets/lilypad.png").convert_alpha(), (60, 26)
+)
+bush_img_orig = pygame.image.load("assets/bushes.png").convert_alpha()
 
+# 🍀 klavertje
 try:
-    lilypad_img = pygame.image.load("assets/lilypad.png").convert_alpha()
-    lilypad_img = pygame.transform.smoothscale(lilypad_img, (60, 26))
+    clover_img = pygame.transform.smoothscale(
+        pygame.image.load("assets/clover.png").convert_alpha(), (26, 26)
+    )
 except:
-    lilypad_img = pygame.Surface((60,26), pygame.SRCALPHA)
-    pygame.draw.ellipse(lilypad_img, (144,238,144), (0,0,60,26))
-
-try:
-    bush_img_orig = pygame.image.load("assets/bushes.png").convert_alpha()
-except:
-    bush_img_orig = pygame.Surface((50,50), pygame.SRCALPHA)
-    pygame.draw.circle(bush_img_orig, (0,100,0), (25,25), 25)
+    # fallback klavertje (getekend)
+    clover_img = pygame.Surface((26,26), pygame.SRCALPHA)
+    pygame.draw.circle(clover_img, (0,200,0), (13,7), 6)
+    pygame.draw.circle(clover_img, (0,200,0), (7,13), 6)
+    pygame.draw.circle(clover_img, (0,200,0), (19,13), 6)
+    pygame.draw.circle(clover_img, (0,200,0), (13,19), 6)
 
 # =====================
-# LILYPADS
+# PLATFORM
 # =====================
-class Log:
-    def __init__(self, y):
-        self.x = RIVER_X + random.randint(10, RIVER_W - 70)
+class Lilypad:
+    def __init__(self, x, y):
+        self.x = x
         self.y = y
-        self.speed = random.choice([2, 3])
-
-    def update(self, logs):
-        self.y += self.speed + CURRENT_SPEED
-        if self.y > HEIGHT + 50:
-            highest = min(l.y for l in logs)
-            self.y = highest - LOG_SPACING
-            self.x = RIVER_X + random.randint(10, RIVER_W - 70)
-
-    def draw(self):
-        screen.blit(lilypad_img, (self.x, self.y))
 
     def rect(self):
         return pygame.Rect(self.x, self.y, 60, 26)
+
+    def draw(self):
+        screen.blit(lilypad_img, (self.x, self.y))
 
 # =====================
 # KIKKER
@@ -71,83 +71,67 @@ class Frog:
         self.reset()
 
     def reset(self):
-        self.x = WIDTH//2 - 25
-        self.y = HEIGHT - BRIDGE_HEIGHT - 50
-        self.vel_y = 0
-        self.on_log = None
-        self.started = False
-
-    def jump(self):
-        if not self.started:
-            self.started = True
-        self.vel_y = -14
-        self.on_log = None
-
-    def update(self, logs):
-        self.vel_y += 0.6
-        self.y += self.vel_y
-
-        self.on_log = None
-        for log in logs:
-            if pygame.Rect(self.x, self.y, 50, 50).colliderect(log.rect()):
-                self.on_log = log
-                self.y = log.y - 38
-                self.vel_y = 0
-
-        # meegaan met stroming
-        if self.started and self.on_log:
-            self.y += self.on_log.speed + CURRENT_SPEED
-
-        # dood in water
-        if self.started:
-            if RIVER_X < self.x < RIVER_X + RIVER_W:
-                if self.on_log is None:
-                    self.reset()
-
-        # blijf op brug voor start
-        if not self.started:
-            self.y = HEIGHT - BRIDGE_HEIGHT - 50
-            self.vel_y = 0
+        self.x = WIDTH // 2 - 25
+        self.y = HEIGHT - 140
+        self.vel_y = JUMP_POWER
 
     def move(self, keys):
         if keys[pygame.K_LEFT]:
-            self.x -= 5
+            self.x -= MOVE_SPEED
         if keys[pygame.K_RIGHT]:
-            self.x += 5
-        self.x = max(0, min(WIDTH-50, self.x))
+            self.x += MOVE_SPEED
+
+        # wrap zoals Doodle Jump
+        if self.x < RIVER_X - 30:
+            self.x = RIVER_X + RIVER_W - 20
+        if self.x > RIVER_X + RIVER_W - 20:
+            self.x = RIVER_X - 30
+
+    def update(self, platforms):
+        global SCROLL_SPEED
+
+        self.vel_y += GRAVITY
+        self.y += self.vel_y
+
+        frog_rect = pygame.Rect(self.x, self.y, 50, 50)
+
+        if self.vel_y > 0:
+            for p in platforms:
+                if frog_rect.colliderect(p.rect()):
+                    if self.y + 50 <= p.y + 15:
+                        self.y = p.y - 50
+                        self.vel_y = JUMP_POWER
+                        break
+
+        if self.y < SCROLL_THRESHOLD:
+            SCROLL_SPEED = SCROLL_THRESHOLD - self.y
+            self.y = SCROLL_THRESHOLD
+        else:
+            SCROLL_SPEED = 0
 
     def draw(self):
         screen.blit(frog_img, (self.x, self.y))
 
 # =====================
-# ACHTERGROND + DETAILS
+# ACHTERGROND (ONGEWIJZIGD)
 # =====================
 def draw_background(bridge_y, ripple_offset, bushes):
     screen.fill((34,139,34))
 
-    # rivier
     pygame.draw.rect(screen, (60,160,210), (RIVER_X, 0, RIVER_W, HEIGHT))
 
-    # water stroming (rimpels)
     for i in range(0, HEIGHT, 35):
         y = (i + ripple_offset) % HEIGHT
         pygame.draw.line(screen, (120,200,230),
                          (RIVER_X+20, y),
                          (RIVER_X+RIVER_W-20, y), 2)
 
-    # oevers
     pygame.draw.rect(screen, (100,70,40), (RIVER_X-8, 0, 8, HEIGHT))
     pygame.draw.rect(screen, (100,70,40), (RIVER_X+RIVER_W, 0, 8, HEIGHT))
 
-    # brug (met details)
     if bridge_y < HEIGHT:
         pygame.draw.rect(screen, (120,80,40), (0, bridge_y, WIDTH, BRIDGE_HEIGHT))
-        for x in range(0, WIDTH, 40):
-            pygame.draw.rect(screen, (100,65,35), (x, bridge_y+5, 35, BRIDGE_HEIGHT-10))
-        for x in range(0, WIDTH, 80):
-            pygame.draw.rect(screen, (70,45,25), (x+10, bridge_y+BRIDGE_HEIGHT-8, 12, 12))
 
-    # struiken langs rivier
     for bush in bushes:
         screen.blit(bush[0], (bush[1], bush[2]))
 
@@ -155,62 +139,79 @@ def draw_background(bridge_y, ripple_offset, bushes):
 # SETUP
 # =====================
 frog = Frog()
-logs = []
+platforms = []
+lives = MAX_LIVES
+game_over = False
+
+for i in range(8):
+    x = RIVER_X + random.randint(20, RIVER_W - 80)
+    y = HEIGHT - i * 80
+    platforms.append(Lilypad(x, y))
+
+bushes = []
+for _ in range(12):
+    scale = random.randint(40, 60)
+    img = pygame.transform.smoothscale(bush_img_orig, (scale, scale))
+    bushes.append((img, RIVER_X-60, random.randint(0, HEIGHT)))
+    bushes.append((img, RIVER_X+RIVER_W+10, random.randint(0, HEIGHT)))
+
 bridge_y = HEIGHT - BRIDGE_HEIGHT
 ripple_offset = 0
 
-start_y = bridge_y + 40
-for i in range(6):
-    logs.append(Log(start_y - i * LOG_SPACING))
-
-# struiken genereren (meer, gestructureerd langs oevers, niet in water)
-bushes = []
-for i in range(15):
-    scale = random.randint(40,60)
-    bush_img = pygame.transform.smoothscale(bush_img_orig, (scale, scale))
-    # linker oever
-    x = RIVER_X - 60 + random.randint(-10,10)
-    y = random.randint(0, HEIGHT-50)
-    bushes.append((bush_img, x, y))
-    # rechter oever
-    x = RIVER_X + RIVER_W + 10 + random.randint(-10,10)
-    y = random.randint(0, HEIGHT-50)
-    bushes.append((bush_img, x, y))
+font_big = pygame.font.SysFont("Trebuchet MS", 36, bold=True)
+font_small = pygame.font.SysFont("Trebuchet MS", 18)
 
 # =====================
 # GAME LOOP
 # =====================
-running = True
-while running:
+while True:
     clock.tick(FPS)
-    ripple_offset += CURRENT_SPEED * 3
+    ripple_offset += 1
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                frog.jump()
+            pygame.quit(); sys.exit()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r and game_over:
+            lives = MAX_LIVES
+            frog.reset()
+            game_over = False
 
     keys = pygame.key.get_pressed()
-    frog.move(keys)
 
-    for log in logs:
-        log.update(logs)
+    if not game_over:
+        frog.move(keys)
+        frog.update(platforms)
 
-    frog.update(logs)
+        for p in platforms:
+            p.y += SCROLL_SPEED
 
-    # brug drijft weg
-    if frog.started:
-        bridge_y += CURRENT_SPEED + 1
+        platforms = [p for p in platforms if p.y < HEIGHT + 50]
+        while len(platforms) < 8:
+            x = RIVER_X + random.randint(20, RIVER_W - 80)
+            y = min(p.y for p in platforms) - random.randint(70, 100)
+            platforms.append(Lilypad(x, y))
+
+        # 🌊 in water gevallen
+        if frog.y > HEIGHT:
+            lives -= 1
+            if lives <= 0:
+                game_over = True
+            else:
+                frog.reset()
 
     draw_background(bridge_y, ripple_offset, bushes)
-
-    for log in logs:
-        log.draw()
+    for p in platforms:
+        p.draw()
     frog.draw()
 
-    pygame.display.flip()
+    # 🍀 levens tekenen
+    for i in range(lives):
+        screen.blit(clover_img, (10 + i * 30, 10))
 
-pygame.quit()
-sys.exit()
+    if game_over:
+        txt = font_big.render("GAME OVER", True, (255,255,255))
+        sub = font_small.render("Press R to restart", True, (220,220,220))
+        screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2 - 40))
+        screen.blit(sub, (WIDTH//2 - sub.get_width()//2, HEIGHT//2 + 10))
+
+    pygame.display.flip()
