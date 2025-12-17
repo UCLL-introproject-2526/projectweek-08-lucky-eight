@@ -2,9 +2,15 @@ import pygame
 import random
 import math
 import sys
+import audio
 
 # ================= INIT =================
 pygame.init()
+pygame.mixer.init()
+
+audio.init_music()
+sfx = audio.load_sfx()
+
 WIDTH, HEIGHT = 800, 650
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Lucky Jump")
@@ -28,12 +34,23 @@ menu_bg = pygame.transform.scale(
 )
 
 # muziek achtergrond
+import os
+
 def play_music():
-    try:
-        pygame.mixer.music.load("assets/Sound/retro-gaming-271301.mp3")
-        pygame.mixer.music.play(-1)
-    except:
-        print("error music")
+    pygame.mixer.music.load(os.path.join("assets", "music", "bg.mp3"))
+    pygame.mixer.music.set_volume(0.35)
+    pygame.mixer.music.play(-1)
+
+# ================= SFX =================
+
+jump_sfx = pygame.mixer.Sound("assets/sfx/jump.wav")
+land_sfx = pygame.mixer.Sound("assets/sfx/land.wav")
+gameover_sfx = pygame.mixer.Sound("assets/sfx/gameover.wav")
+
+jump_sfx.set_volume(0.5)
+land_sfx.set_volume(0.5)
+gameover_sfx.set_volume(0.6)
+
 # 👉 DE NIEUWE GAME ACHTERGROND
 try:
     game_bg_img = pygame.transform.scale(
@@ -73,6 +90,16 @@ def menu():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
+            # 🎵 Audio controls
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
+                audio.toggle_music()
+                
+            if e.type == pygame.KEYDOWN and (e.key == pygame.K_PLUS or e.key == pygame.K_EQUALS):
+                audio.volume_up()
+                
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_MINUS:
+                audio.volume_down()
+
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 if select.collidepoint(e.pos):
                     return "avatar"
@@ -287,6 +314,8 @@ def game():
                     if frog_rect.colliderect(p.rect()) and self.y + 50 <= p.y + 15:
                         self.y = p.y - 50
                         self.vel_y = JUMP_POWER
+                        sfx["land"].play()
+                        sfx["jump"].play()
                         break
             if self.y < SCROLL_THRESHOLD:
                 SCROLL_SPEED = SCROLL_THRESHOLD - self.y
@@ -307,6 +336,7 @@ def game():
     frog = Frog()
     platforms = [Lilypad(RIVER_X + random.randint(20, 220), HEIGHT - i * 80) for i in range(8)]
     lives, game_over = MAX_LIVES, False
+    gameover_played = False
 
     # NIEUW
     collect_clovers = []
@@ -330,6 +360,7 @@ def game():
                 return "menu"
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r and game_over:
                 lives, game_over, score = MAX_LIVES, False, 0
+                gameover_played = False
                 frog.reset()
                 collect_clovers.clear()
 
@@ -366,6 +397,9 @@ def game():
                 lives -= 1
                 if lives <= 0:
                     game_over = True
+                if not gameover_played:
+                    sfx["gameover"].play()
+                    gameover_played = True
                 else:
                     frog.reset()
 
