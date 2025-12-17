@@ -27,6 +27,13 @@ menu_bg = pygame.transform.scale(
     (WIDTH, HEIGHT)
 )
 
+# muziek achtergrond
+def play_music():
+    try:
+        pygame.mixer.music.load("assets/Sound/retro-gaming-271301.mp3")
+        pygame.mixer.music.play(-1)
+    except:
+        print("error music")
 # 👉 DE NIEUWE GAME ACHTERGROND
 try:
     game_bg_img = pygame.transform.scale(
@@ -404,6 +411,7 @@ def game():
 # ================= MAIN =================
 def main():
     state="menu"
+    play_music()
     while True:
         if state=="menu": state=menu()
         elif state=="avatar": state=avatar()
