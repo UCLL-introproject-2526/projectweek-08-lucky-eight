@@ -107,6 +107,10 @@ def draw_river_environment():
     pygame.draw.rect(screen, (60, 160, 210), (0, 160, WIDTH, 330))
     pygame.draw.rect(screen, (100, 70, 40), (0, 155, WIDTH, 8))
     pygame.draw.rect(screen, (100, 70, 40), (0, 485, WIDTH, 8))
+    for r in ripples:
+        r[0] -= r[2] 
+        if r[0] < -50: r[0] = WIDTH + 50
+        pygame.draw.line(screen, (100, 190, 230), (r[0], r[1]), (r[0]+30, r[1]), 2)
     for bx, by in bush_positions:
         screen.blit(bush_img, (bx, by))
     for flower in flower_data:
@@ -208,7 +212,7 @@ def game():
     screen = pygame.display.get_surface()
     WIDTH, HEIGHT = screen.get_width(), screen.get_height()
     clock = pygame.time.Clock()
-    
+
     # CONSTANTEN
     RIVER_W, RIVER_X = 300, WIDTH // 2 - 150
     BRIDGE_HEIGHT = 60
@@ -218,24 +222,49 @@ def game():
     MAX_LIVES = 5
 
     # ASSETS
-    frog_img = pygame.transform.smoothscale(frogs[selected_frog_index] if selected_frog_index is not None else frogs[0], (50, 50))
-    lilypad_img_game = pygame.transform.smoothscale(pygame.image.load("assets/lilypad.png").convert_alpha(), (60, 26))
+    frog_img = pygame.transform.smoothscale(
+        frogs[selected_frog_index] if selected_frog_index is not None else frogs[0],
+        (50, 50)
+    )
+    lilypad_img_game = pygame.transform.smoothscale(
+        pygame.image.load("assets/lilypad.png").convert_alpha(), (60, 26)
+    )
 
     try:
-        clover_img = pygame.transform.smoothscale(pygame.image.load("assets/clover.png").convert_alpha(), (26, 26))
-        tint = pygame.Surface(clover_img.get_size(), pygame.SRCALPHA); tint.fill((0, 220, 0, 255))
+        clover_img = pygame.transform.smoothscale(
+            pygame.image.load("assets/clover.png").convert_alpha(), (26, 26)
+        )
+        tint = pygame.Surface(clover_img.get_size(), pygame.SRCALPHA)
+        tint.fill((0, 220, 0, 255))
         clover_img.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     except:
-        clover_img = pygame.Surface((26, 26), pygame.SRCALPHA); pygame.draw.circle(clover_img, (0,220,0), (13,13), 10)
+        clover_img = pygame.Surface((26, 26), pygame.SRCALPHA)
+        pygame.draw.circle(clover_img, (0, 220, 0), (13, 13), 10)
 
     class Lilypad:
-        def __init__(self, x, y): self.x, self.y = x, y
-        def rect(self): return pygame.Rect(self.x, self.y, 60, 26)
-        def draw(self): screen.blit(lilypad_img_game, (self.x, self.y))
+        def __init__(self, x, y):
+            self.x, self.y = x, y
+        def rect(self):
+            return pygame.Rect(self.x, self.y, 60, 26)
+        def draw(self):
+            screen.blit(lilypad_img_game, (self.x, self.y))
+
+    # NIEUW: collectible klavertje (gebruikt zelfde groene sprite)
+    class CollectibleClover:
+        def __init__(self, x, y):
+            self.x, self.y = x, y
+        def rect(self):
+            return pygame.Rect(self.x, self.y, 26, 26)
+        def draw(self):
+            screen.blit(clover_img, (self.x, self.y))
 
     class Frog:
-        def __init__(self): self.reset()
-        def reset(self): self.x, self.y, self.vel_y = WIDTH // 2 - 25, HEIGHT - 140, JUMP_POWER
+        def __init__(self):
+            self.reset()
+        def reset(self):
+            self.x = WIDTH // 2 - 25
+            self.y = HEIGHT - 140
+            self.vel_y = JUMP_POWER
         def move(self, keys):
             if keys[pygame.K_LEFT]: self.x -= MOVE_SPEED
             if keys[pygame.K_RIGHT]: self.x += MOVE_SPEED
@@ -249,61 +278,128 @@ def game():
             if self.vel_y > 0:
                 for p in platforms:
                     if frog_rect.colliderect(p.rect()) and self.y + 50 <= p.y + 15:
-                        self.y, self.vel_y = p.y - 50, JUMP_POWER
+                        self.y = p.y - 50
+                        self.vel_y = JUMP_POWER
                         break
             if self.y < SCROLL_THRESHOLD:
                 SCROLL_SPEED = SCROLL_THRESHOLD - self.y
                 self.y = SCROLL_THRESHOLD
-            else: SCROLL_SPEED = 0
-        def draw(self): screen.blit(frog_img, (self.x, self.y))
+            else:
+                SCROLL_SPEED = 0
+        def draw(self):
+            screen.blit(frog_img, (self.x, self.y))
 
     def draw_bottom_bridge():
         y = HEIGHT - BRIDGE_HEIGHT
         pygame.draw.rect(screen, (120, 80, 40), (0, y, WIDTH, BRIDGE_HEIGHT))
-        for x in range(0, WIDTH, 40): pygame.draw.rect(screen, (100, 65, 35), (x+5, y+10, 30, BRIDGE_HEIGHT-20))
+        for x in range(0, WIDTH, 40):
+            pygame.draw.rect(screen, (100, 65, 35), (x + 5, y + 10, 30, BRIDGE_HEIGHT - 20))
         pygame.draw.rect(screen, (80, 50, 25), (0, y, WIDTH, 6))
 
     # SETUP GAME
     frog = Frog()
     platforms = [Lilypad(RIVER_X + random.randint(20, 220), HEIGHT - i * 80) for i in range(8)]
     lives, game_over = MAX_LIVES, False
+
+    # NIEUW
+    collect_clovers = []
+    score = 0
+
     font_big = pygame.font.SysFont("Trebuchet MS", 36, bold=True)
     font_small = pygame.font.SysFont("Trebuchet MS", 18)
 
+    # RIPPLE EFFECT
+    ripples = [[
+        random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40),
+        random.randint(0, HEIGHT),
+        random.uniform(0.5, 2)
+    ] for _ in range(45)]
+
     while True:
         clock.tick(60)
+
         for event in pygame.event.get():
-            if event.type == pygame.QUIT: return "menu"
+            if event.type == pygame.QUIT:
+                return "menu"
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r and game_over:
-                lives, game_over = MAX_LIVES, False
+                lives, game_over, score = MAX_LIVES, False, 0
                 frog.reset()
+                collect_clovers.clear()
 
         if not game_over:
             frog.move(pygame.key.get_pressed())
             frog.update(platforms)
+
             for p in platforms: p.y += SCROLL_SPEED
+            for c in collect_clovers: c.y += SCROLL_SPEED  # NIEUW
+
             platforms = [p for p in platforms if p.y < HEIGHT + 50]
+            collect_clovers = [c for c in collect_clovers if c.y < HEIGHT + 50]
+
             while len(platforms) < 8:
-                platforms.append(Lilypad(RIVER_X + random.randint(20, 220), min(p.y for p in platforms) - random.randint(70, 100)))
+                p = Lilypad(
+                    RIVER_X + random.randint(20, 220),
+                    min(pl.y for pl in platforms) - random.randint(70, 100)
+                )
+                platforms.append(p)
+
+                # NIEUW: kans op klavertje
+                if random.random() < 0.35:
+                    collect_clovers.append(
+                        CollectibleClover(p.x + 17, p.y - 22)
+                    )
+
+            frog_rect = pygame.Rect(frog.x, frog.y, 50, 50)
+            for c in collect_clovers[:]:
+                if frog_rect.colliderect(c.rect()):
+                    collect_clovers.remove(c)
+                    score += 1  # NIEUW
+
             if frog.y > HEIGHT:
                 lives -= 1
-                if lives <= 0: game_over = True
-                else: frog.reset()
+                if lives <= 0:
+                    game_over = True
+                else:
+                    frog.reset()
 
-        # 👉 TEKEN DE NIEUWE ACHTERGROND
+        # ACHTERGROND
         screen.blit(game_bg_img, (0, 0))
-        
+
+        # RIPPLE
+        for r in ripples:
+            r[1] += r[2] + SCROLL_SPEED * 0.3
+            if r[1] > HEIGHT + 10:
+                r[1] = -10
+                r[0] = random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40)
+            offset = math.sin(pygame.time.get_ticks() * 0.005 + r[1]) * 3
+            pygame.draw.line(
+                screen, (100, 190, 230),
+                (r[0] + offset, r[1]),
+                (r[0] + 30 + offset, r[1]), 2
+            )
+
         for p in platforms: p.draw()
+        for c in collect_clovers: c.draw()  # NIEUW
         frog.draw()
-        for i in range(lives): screen.blit(clover_img, (10 + i * 30, 10))
+
+        # LIVES linksboven (ongewijzigd)
+        for i in range(lives):
+            screen.blit(clover_img, (10 + i * 30, 10))
+
+        # SCORE rechtsboven (NIEUW)
+        score_txt = font_small.render(f"Score: {score}", True, (255, 255, 255))
+        screen.blit(score_txt, (WIDTH - score_txt.get_width() - 10, 10))
+
         draw_bottom_bridge()
 
         if game_over:
-            txt = font_big.render("GAME OVER", True, (255,255,255))
-            sub = font_small.render("Press R to restart", True, (220,220,220))
-            screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2 - 40))
-            screen.blit(sub, (WIDTH//2 - sub.get_width()//2, HEIGHT//2 + 10))
+            txt = font_big.render("GAME OVER", True, (255, 255, 255))
+            sub = font_small.render("Press R to restart", True, (220, 220, 220))
+            screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
+            screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 2 + 10))
+
         pygame.display.flip()
+
 
 # ================= MAIN =================
 def main():
