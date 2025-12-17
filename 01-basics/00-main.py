@@ -341,23 +341,34 @@ def game():
         def draw(self):
             screen.blit(frog_img, (self.x, self.y))
 
+
     # =====================
-    # ACHTERGROND (NIET AANRAKEN)
+    # ACHTERGROND (GEFIKST)
     # =====================
-    def draw_background(bridge_y, ripple_offset, bushes):
-        screen.fill((34,139,34))
+    def draw_background(ripple_offset, bushes):
+        # 1. Teken het gras (overal)
+        screen.fill((34, 139, 34))
+        
+        # 2. Teken de gras-sprietjes (textuur) uit de globale lijst
+        for tx, ty in grass_texture:
+            screen.blit(pixel_font.render("", False, (0,0,0)), (0,0)) # Dummy voor font check
+            pygame.draw.line(screen, (25, 100, 25), (tx, ty), (tx, ty + 4), 1)
 
-        pygame.draw.rect(screen, (60,160,210), (RIVER_X, 0, RIVER_W, HEIGHT))
+        # 3. Teken de rivier in het midden
+        pygame.draw.rect(screen, (60, 160, 210), (RIVER_X, 0, RIVER_W, HEIGHT))
 
-        for i in range(0, HEIGHT, 35):
-            y = (i + ripple_offset) % HEIGHT
-            pygame.draw.line(screen, (120,200,230),
-                             (RIVER_X+20, y),
-                             (RIVER_X+RIVER_W-20, y), 2)
+        # 4. Teken de rimpels (bewegend) binnen de rivier
+        for r in ripples:
+            # We laten de rimpels binnen de RIVER_X en RIVER_X + RIVER_W blijven
+            ry = (r[1] + ripple_offset) % HEIGHT # Laat ze naar beneden stromen
+            rx = RIVER_X + (r[0] % (RIVER_W - 30))
+            pygame.draw.line(screen, (100, 190, 230), (rx, ry), (rx + 30, ry), 2)
 
-        pygame.draw.rect(screen, (100,70,40), (RIVER_X-8, 0, 8, HEIGHT))
-        pygame.draw.rect(screen, (100,70,40), (RIVER_X+RIVER_W, 0, 8, HEIGHT))
+        # 5. Modderranden van de rivier
+        pygame.draw.rect(screen, (100, 70, 40), (RIVER_X - 8, 0, 8, HEIGHT))
+        pygame.draw.rect(screen, (100, 70, 40), (RIVER_X + RIVER_W, 0, 8, HEIGHT))
 
+        # 6. Teken de struiken
         for bush in bushes:
             screen.blit(bush[0], (bush[1], bush[2]))
 
@@ -435,7 +446,7 @@ def game():
                 else:
                     frog.reset()
 
-        draw_background(bridge_y, ripple_offset, bushes)
+        draw_background(ripple_offset, bushes)
 
         for p in platforms:
             p.draw()
