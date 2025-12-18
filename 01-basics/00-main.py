@@ -391,7 +391,8 @@ def avatar():
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 if pygame.Rect(50,560,110,45).collidepoint(e.pos): return "menu"
                 if pygame.Rect(WIDTH-160,560,110,45).collidepoint(e.pos):
-                    if selected_frog_index is not None: return "game"
+                 if selected_frog_index is not None: 
+                  return "level_select"  
                 for i,(x,y) in enumerate(positions):
                     if pygame.Rect(x,y,85,85).collidepoint(e.pos): selected_frog_index = i
         draw_river_environment()
