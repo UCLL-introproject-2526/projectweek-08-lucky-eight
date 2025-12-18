@@ -22,6 +22,7 @@ clock = pygame.time.Clock()
 
 # ================= STATE =================
 selected_frog_index = None
+selected_level_img = None  # Slaat de gekozen achtergrond op
 
 # ================= FONTS =================
 try:
@@ -31,6 +32,27 @@ except:
 button_font = pygame.font.SysFont("Trebuchet MS", 20, bold=True)
 
 # ================= ASSETS =================
+# Level Select achtergrond inladen
+try:
+    level_select_bg = pygame.transform.scale(
+        pygame.image.load("assets/select level background.png").convert(),
+        (WIDTH, HEIGHT)
+    )
+except:
+    level_select_bg = pygame.Surface((WIDTH, HEIGHT))
+    level_select_bg.fill((30, 60, 30))
+
+# Alle 5 level achtergronden laden
+level_backgrounds = []
+for i in range(1, 6):
+    try:
+        img = pygame.transform.scale(pygame.image.load(f"assets/level {i} background.png").convert(), (WIDTH, HEIGHT))
+        level_backgrounds.append(img)
+    except:
+        # Fallback kleur als het plaatje mist
+        surf = pygame.Surface((WIDTH, HEIGHT))
+        surf.fill((34, 40 + (i*20), 34)) 
+        level_backgrounds.append(surf)
 # Menu achtergrond
 menu_bg = pygame.transform.scale(
     pygame.image.load("assets/lucky jump menu.png").convert(),
@@ -78,6 +100,39 @@ def draw_button(x, y, label, mouse_pos):
     return rect
 
 # ================= MENU =================
+def level_select():
+    global selected_level_img
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        screen.blit(level_select_bg, (0, 0))
+        
+        draw_balanced_title("Choose Your World", 40)
+
+        level_buttons = []
+        for i in range(5):
+            bx, by = WIDTH // 2 - 20, 130 + (i * 85)
+            # Preview plaatje
+            p_rect = pygame.Rect(WIDTH // 2 - 140, by, 100, 55)
+            pygame.draw.rect(screen, (255, 255, 255), p_rect.inflate(6,6), border_radius=5)
+            preview = pygame.transform.scale(level_backgrounds[i], (100, 55))
+            screen.blit(preview, (p_rect.x, p_rect.y))
+
+            btn = draw_button(bx, by + 5, f"LEVEL {i+1}", mouse_pos)
+            level_buttons.append((btn, i))
+
+        back_btn = draw_button(50, HEIGHT - 70, "BACK", mouse_pos)
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                if back_btn.collidepoint(e.pos): return "menu"
+                for btn, idx in level_buttons:
+                    if btn.collidepoint(e.pos):
+                        selected_level_img = level_backgrounds[idx] # Zet de achtergrond vast
+                        return "game"
+
+        pygame.display.flip()
+        clock.tick(60)
 def menu():
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -116,7 +171,7 @@ def menu():
                 if select.collidepoint(e.pos):
                     return "avatar"
                 if start.collidepoint(e.pos):
-                    return "game"
+                    return "level_select"
                 if settings_rect.collidepoint(e.pos):
                     return "settings" 
                 if quitb.collidepoint(e.pos):
@@ -546,8 +601,11 @@ def game():
                 else:
                     frog.reset()
 
-        # ACHTERGROND
-        screen.blit(game_bg_img, (0, 0))
+        # ACHTERGROND (Gebruik gekozen level, anders de standaard rivier)
+        if selected_level_img:
+            screen.blit(selected_level_img, (0, 0))
+        else:
+            screen.blit(game_bg_img, (0, 0))
 
         # RIPPLE
         for r in ripples:
@@ -632,12 +690,13 @@ def game():
 
 # ================= MAIN =================
 def main():
-    state="menu"
+    state = "menu"
     play_music()
     while True:
-        if state=="menu": state=menu()
-        elif state=="avatar": state=avatar()
-        elif state=="game": state=game()
+        if state == "menu": state = menu()
+        elif state == "avatar": state = avatar()
+        elif state == "level_select": state = level_select() # VOEG DEZE TOE
+        elif state == "game": state = game()
         elif state == "settings": state = settings_menu()
 
 main()
