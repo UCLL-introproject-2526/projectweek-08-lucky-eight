@@ -21,6 +21,7 @@ pygame.display.set_caption("Lucky Jump")
 clock = pygame.time.Clock()
 
 # ================= STATE =================
+selected_level_index = 0
 selected_frog_index = None
 selected_level_img = None  # Slaat de gekozen achtergrond op
 
@@ -78,6 +79,25 @@ land_sfx.set_volume(0.5)
 gameover_sfx.set_volume(0.6)
 
 # 👉 DE NIEUWE GAME ACHTERGROND
+# ================= GAME OVER IMAGES =================
+game_over_images = []
+
+try:
+    game_over_images = [
+        pygame.image.load("assets/game over.png").convert_alpha(),          # level 1 (groen)
+        pygame.image.load("assets/game over (winter).png").convert_alpha(), # level 2 (blauw)
+        pygame.image.load("assets/game over (candy).png").convert_alpha(),  # level 3 (roze)
+        pygame.image.load("assets/game over (zomer).png").convert_alpha(), # level 4 (geel)
+        pygame.image.load("assets/game over (halloween).png").convert_alpha(),  # level 5 (paars)
+    ]
+
+    game_over_images = [
+        pygame.transform.smoothscale(img, (420, 420))
+        for img in game_over_images
+    ]
+except:
+    game_over_images = []
+
 try:
     game_bg_img = pygame.transform.scale(
         pygame.image.load("assets/gameriver.png").convert(),
@@ -102,6 +122,8 @@ def draw_button(x, y, label, mouse_pos):
 # ================= MENU =================
 def level_select():
     global selected_level_img
+    global selected_level_index
+
     while True:
         mouse_pos = pygame.mouse.get_pos()
         screen.blit(level_select_bg, (0, 0))
@@ -128,8 +150,10 @@ def level_select():
                 if back_btn.collidepoint(e.pos): return "menu"
                 for btn, idx in level_buttons:
                     if btn.collidepoint(e.pos):
-                        selected_level_img = level_backgrounds[idx] # Zet de achtergrond vast
+                        selected_level_img = level_backgrounds[idx]
+                        selected_level_index = idx
                         return "game"
+
 
         pygame.display.flip()
         clock.tick(60)
@@ -463,7 +487,7 @@ def game():
         def draw(self):
             screen.blit(lilypad_img_game, (self.x, self.y))
 
-    # NIEUW: collectible klavertje (gebruikt zelfde groene sprite)
+    # NIEUW: collectible klavertje 
     class CollectibleClover:
         def __init__(self, x, y):
             self.x, self.y = x, y
@@ -485,8 +509,10 @@ def game():
         def move(self, keys):
             if keys[pygame.K_LEFT]: self.x -= MOVE_SPEED
             if keys[pygame.K_RIGHT]: self.x += MOVE_SPEED
-            if self.x < RIVER_X - 30: self.x = RIVER_X + RIVER_W - 20
-            if self.x > RIVER_X + RIVER_W - 20: self.x = RIVER_X - 30
+            if self.x < RIVER_X:
+               self.x = RIVER_X
+            if self.x > RIVER_X + RIVER_W - 50:
+                self.x = RIVER_X + RIVER_W - 50
         def update(self, platforms):
             nonlocal score
             nonlocal SCROLL_SPEED
@@ -677,15 +703,49 @@ def game():
         draw_bottom_bridge()
 
         if game_over:
-            txt = font_big.render("GAME OVER", True, (255, 255, 255))
-            sub = font_small.render("Press R to restart", True, (220, 220, 220))
-            screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
-            screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 2 + 10))
-            score_txt = font_small.render(f"Final Score: {score}", True, (255, 255, 255))
-            screen.blit(
-                score_txt,
-                (WIDTH // 2 - score_txt.get_width() // 2, HEIGHT // 2 + 45)
+            # donkere overlay
+             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+             overlay.fill((0, 0, 0, 150))
+             screen.blit(overlay, (0, 0))
+
+            # bounce effect
+             t = pygame.time.get_ticks()
+             bounce = 1.0 + math.sin(t * 0.004) * 0.05
+             size = int(420 * bounce)
+
+             if game_over_images:
+                img = pygame.transform.smoothscale(
+                    game_over_images[selected_level_index],
+                    (size, size)
+                )
+                rect = img.get_rect(
+                    center=(WIDTH // 2, HEIGHT // 2 - 30)
+                )
+                screen.blit(img, rect)
+
+             sub = font_small.render(
+                "Press R to restart",
+                True,
+                (240, 240, 240)
             )
+             score_txt = font_small.render(
+                f"Final Score: {score}",
+                True,
+                (255, 255, 255)
+            )
+
+             screen.blit(
+                sub,
+                (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 2 + 190)
+            )
+             screen.blit(
+                score_txt,
+                (WIDTH // 2 - score_txt.get_width() // 2, HEIGHT // 2 + 220)
+            )
+
+
+
+       
         pygame.display.flip()
 
 
@@ -699,5 +759,4 @@ def main():
         elif state == "level_select": state = level_select() # VOEG DEZE TOE
         elif state == "game": state = game()
         elif state == "settings": state = settings_menu()
-
 main()
