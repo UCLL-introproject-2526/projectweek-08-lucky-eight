@@ -4,6 +4,10 @@ import math
 import sys
 import audio
 
+# ===== GLOBAL SETTINGS =====
+music_muted = False
+sound_muted = False
+
 # ================= INIT =================
 pygame.init()
 pygame.mixer.init()
@@ -78,13 +82,21 @@ def menu():
     while True:
         mouse_pos = pygame.mouse.get_pos()
         screen.blit(menu_bg, (0, 0))
+        
+        btn_w, btn_h = 180, 55
+        gap = 18
+        
+        x = WIDTH // 2 - btn_w // 2
+        y_start = 380
 
         start = pygame.Rect(WIDTH//2-55, 380, 110, 45)
         select = pygame.Rect(WIDTH//2-55, 440, 110, 45)
-        quitb = pygame.Rect(WIDTH//2-55, 500, 110, 45)
+        settings_rect = pygame.Rect(WIDTH//2-55, 500, 110, 45)
+        quitb = pygame.Rect(WIDTH//2-55, 560, 110, 45)
 
         draw_button(start.x, start.y, "START", mouse_pos)
         draw_button(select.x, select.y, "SELECT", mouse_pos)
+        draw_button(settings_rect.x, settings_rect.y, "SETTINGS", mouse_pos)
         draw_button(quitb.x, quitb.y, "QUIT", mouse_pos)
 
         for e in pygame.event.get():
@@ -105,11 +117,122 @@ def menu():
                     return "avatar"
                 if start.collidepoint(e.pos):
                     return "game"
+                if settings_rect.collidepoint(e.pos):
+                    return "settings" 
                 if quitb.collidepoint(e.pos):
-                    pygame.quit(); sys.exit()
+                    pygame.quit()
+                    sys.exit()
 
         pygame.display.flip()
         clock.tick(60)
+
+def draw_toggle_icon(screen, rect, is_muted, kind):
+    pygame.draw.rect(screen, (40, 180, 60), rect, border_radius=14)
+    pygame.draw.rect(screen, (255, 255, 255), rect, 3, border_radius=14)
+
+    cx, cy = rect.center
+
+    if kind == "sound":
+        body = pygame.Rect(0, 0, rect.w // 5, rect.h // 3)
+        body.center = (cx - rect.w // 10, cy)
+        pygame.draw.rect(screen, (255, 255, 255), body, border_radius=4)
+
+        tri = [
+            (body.right, body.top),
+            (body.right + rect.w // 10, cy),
+            (body.right, body.bottom),
+        ]
+        pygame.draw.polygon(screen, (255, 255, 255), tri)
+        pygame.draw.arc(
+            screen, (255, 255, 255),
+            pygame.Rect(cx - rect.w//20, cy - rect.h//6, rect.w//6, rect.h//3),
+            -0.8, 0.8, 3
+        )
+
+    elif kind == "music":
+        stem_x = cx - rect.w // 20
+        stem_top = cy - rect.h // 6
+        stem_bot = cy + rect.h // 8
+        pygame.draw.line(screen, (255, 255, 255), (stem_x, stem_top), (stem_x, stem_bot), 5)
+        pygame.draw.circle(screen, (255, 255, 255), (stem_x - rect.w//15, stem_bot), rect.w//12)
+        pygame.draw.line(screen, (255, 255, 255), (stem_x, stem_top), (stem_x + rect.w//8, stem_top + rect.h//12), 5)
+
+    if is_muted:
+        pygame.draw.line(
+            screen, (220, 40, 40),
+            (rect.left + 10, rect.bottom - 10),
+            (rect.right - 10, rect.top + 10),
+            6
+        )
+
+def settings_menu():
+    global sound_muted, music_muted
+    screen = pygame.display.get_surface()
+    WIDTH, HEIGHT = screen.get_width(), screen.get_height()
+    clock = pygame.time.Clock()
+
+    font_big = pygame.font.SysFont("Trebuchet MS", 40, bold=True)
+    font_small = pygame.font.SysFont("Trebuchet MS", 22, bold=True)
+
+    global music_muted, sound_muted
+
+    box_w, box_h = 110, 90
+    gap = 50
+    y = HEIGHT // 2 - 20
+
+    music_rect = pygame.Rect(WIDTH//2 - gap//2 - box_w, y, box_w, box_h)
+    sound_rect = pygame.Rect(WIDTH//2 + gap//2, y, box_w, box_h)
+
+    back_rect = pygame.Rect(40, 40, 120, 45)
+
+    while True:
+        clock.tick(60)
+        
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                return "menu"
+
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                return "menu"
+
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                if back_rect.collidepoint(e.pos):
+                    return "menu"
+
+                if music_rect.collidepoint(e.pos):
+                    music_muted = not music_muted
+                    if music_muted:
+                        pygame.mixer.music.set_volume(0.0)
+                    else:
+                        pygame.mixer.music.set_volume(1.0)
+
+                if sound_rect.collidepoint(e.pos):
+                    sound_muted = not sound_muted
+
+        screen.fill((20, 80, 160))
+
+        title = font_big.render("Settings", True, (255, 255, 255))
+        screen.blit(title, (WIDTH//2 - title.get_width()//2, 110))
+
+        panel = pygame.Rect(WIDTH//2 - 260, HEIGHT//2 - 90, 520, 220)
+        pygame.draw.rect(screen, (10, 40, 90), panel, border_radius=24)
+
+
+        lab_sound = font_small.render("Sound", True, (255, 255, 255))
+        lab_music = font_small.render("Music", True, (255, 255, 255))
+        screen.blit(lab_music, (music_rect.centerx - lab_music.get_width()//2, music_rect.top - 30))
+        screen.blit(lab_sound, (sound_rect.centerx - lab_sound.get_width()//2, sound_rect.top - 30))
+
+
+        draw_toggle_icon(screen, music_rect, music_muted, "music")
+        draw_toggle_icon(screen, sound_rect, sound_muted, "sound")
+
+        pygame.draw.rect(screen, (40, 40, 40), back_rect, border_radius=10)
+        pygame.draw.rect(screen, (255, 255, 255), back_rect, 2, border_radius=10)
+        back_txt = font_small.render("Back", True, (255, 255, 255))
+        screen.blit(back_txt, (back_rect.centerx - back_txt.get_width()//2, back_rect.centery - back_txt.get_height()//2))
+
+        pygame.display.flip()
 
 # ================= AVATAR (ONGEWIJZIGD) =================
 random.seed(42)
@@ -278,6 +401,7 @@ def game():
     class Lilypad:
         def __init__(self, x, y):
             self.x, self.y = x, y
+            self.scored = False
         def rect(self):
             return pygame.Rect(self.x, self.y, 60, 26)
         def draw(self):
@@ -294,17 +418,21 @@ def game():
 
     class Frog:
         def __init__(self):
-            self.reset()
+            self.reset ()
         def reset(self):
             self.x = WIDTH // 2 - 25
-            self.y = HEIGHT - 140
-            self.vel_y = JUMP_POWER
+            self.y = HEIGHT - 80
+            self.vel_y = 0
+            self.on_platform = False
+            self.last_platform = None
+            self.just_landed = False
         def move(self, keys):
             if keys[pygame.K_LEFT]: self.x -= MOVE_SPEED
             if keys[pygame.K_RIGHT]: self.x += MOVE_SPEED
             if self.x < RIVER_X - 30: self.x = RIVER_X + RIVER_W - 20
             if self.x > RIVER_X + RIVER_W - 20: self.x = RIVER_X - 30
         def update(self, platforms):
+            nonlocal score
             nonlocal SCROLL_SPEED
             self.vel_y += GRAVITY
             self.y += self.vel_y
@@ -314,14 +442,20 @@ def game():
                     if frog_rect.colliderect(p.rect()) and self.y + 50 <= p.y + 15:
                         self.y = p.y - 50
                         self.vel_y = JUMP_POWER
-                        sfx["land"].play()
-                        sfx["jump"].play()
+                        sfx.play("jump")
+                        sfx.play("land")
+
+                        if not p.scored:
+                         p.scored = True
+                         score += 1
+
                         break
-            if self.y < SCROLL_THRESHOLD:
+            if self.vel_y < 0 and self.y < SCROLL_THRESHOLD:
                 SCROLL_SPEED = SCROLL_THRESHOLD - self.y
                 self.y = SCROLL_THRESHOLD
             else:
                 SCROLL_SPEED = 0
+
         def draw(self):
             screen.blit(frog_img, (self.x, self.y))
 
@@ -341,6 +475,9 @@ def game():
     # NIEUW
     collect_clovers = []
     score = 0
+    paused = False
+    pause_rect = pygame.Rect(WIDTH - 140, 40, 120, 35)
+    scored_platforms = set ()
 
     font_big = pygame.font.SysFont("Trebuchet MS", 36, bold=True)
     font_small = pygame.font.SysFont("Trebuchet MS", 18)
@@ -354,22 +491,28 @@ def game():
 
     while True:
         clock.tick(60)
-
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "menu"
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+             if pause_rect.collidepoint(event.pos):
+                 paused = not paused
+
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r and game_over:
                 lives, game_over, score = MAX_LIVES, False, 0
                 gameover_played = False
                 frog.reset()
                 collect_clovers.clear()
+                paused = False
 
-        if not game_over:
+        if (not game_over) and (not paused):
             frog.move(pygame.key.get_pressed())
             frog.update(platforms)
 
             for p in platforms: p.y += SCROLL_SPEED
-            for c in collect_clovers: c.y += SCROLL_SPEED  # NIEUW
+            for c in collect_clovers: c.y += SCROLL_SPEED
 
             platforms = [p for p in platforms if p.y < HEIGHT + 50]
             collect_clovers = [c for c in collect_clovers if c.y < HEIGHT + 50]
@@ -391,14 +534,14 @@ def game():
             for c in collect_clovers[:]:
                 if frog_rect.colliderect(c.rect()):
                     collect_clovers.remove(c)
-                    score += 1  # NIEUW
+                    score += 5  # NIEUW
 
             if frog.y > HEIGHT:
                 lives -= 1
                 if lives <= 0:
                     game_over = True
                 if not gameover_played:
-                    sfx["gameover"].play()
+                    sfx.play("gameover")
                     gameover_played = True
                 else:
                     frog.reset()
@@ -430,7 +573,48 @@ def game():
         # SCORE rechtsboven (NIEUW)
         score_txt = font_small.render(f"Score: {score}", True, (255, 255, 255))
         screen.blit(score_txt, (WIDTH - score_txt.get_width() - 10, 10))
+        # PAUSE button 
+        pause_w, pause_h = 28, 28
+        pause_rect = pygame.Rect(
+            WIDTH - score_txt.get_width() - 10 - pause_w - 10,
+            8,
+            pause_w,
+            pause_h
+        )
 
+        pygame.draw.rect(screen, (255, 255, 255), pause_rect, border_radius=6)
+        pygame.draw.rect(screen, (0, 0, 0), pause_rect, 2, border_radius=6)
+
+        if not paused:
+            pygame.draw.rect(screen, (0, 0, 0), (pause_rect.x + 8, pause_rect.y + 6, 4, 16))
+            pygame.draw.rect(screen, (0, 0, 0), (pause_rect.x + 16, pause_rect.y + 6, 4, 16))
+        else:
+            pygame.draw.polygon(screen, (0, 0, 0), [
+                (pause_rect.x + 9, pause_rect.y + 6),
+                (pause_rect.x + 9, pause_rect.y + 22),
+                (pause_rect.x + 21, pause_rect.y + 14),
+            ])
+
+        # PAUSE button (right side, under/near score)
+        pause_label = "Resume" if paused else "Pause"
+        pause_txt = font_small.render(pause_label, True, (255, 255, 255))
+
+        pygame.draw.rect(screen, (40, 40, 40), pause_rect, border_radius=6)
+        pygame.draw.rect(screen, (255, 255, 255), pause_rect, 2, border_radius=6)
+
+        if not paused:
+            # ⏸ pause icon
+            pygame.draw.rect(screen, (0, 0, 0),
+                             (pause_rect.x + 8, pause_rect.y + 6, 4, 16))
+            pygame.draw.rect(screen, (0, 0, 0),
+                             (pause_rect.x + 16, pause_rect.y + 6, 4, 16))
+        else:
+            # ▶ play icon
+            pygame.draw.polygon(screen, (0, 0, 0), [
+                (pause_rect.x + 9, pause_rect.y + 6),
+                (pause_rect.x + 9, pause_rect.y + 22),
+                (pause_rect.x + 21, pause_rect.y + 14),
+            ])  
         draw_bottom_bridge()
 
         if game_over:
@@ -438,7 +622,11 @@ def game():
             sub = font_small.render("Press R to restart", True, (220, 220, 220))
             screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
             screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 2 + 10))
-
+            score_txt = font_small.render(f"Final Score: {score}", True, (255, 255, 255))
+            screen.blit(
+                score_txt,
+                (WIDTH // 2 - score_txt.get_width() // 2, HEIGHT // 2 + 45)
+            )
         pygame.display.flip()
 
 
@@ -450,5 +638,6 @@ def main():
         if state=="menu": state=menu()
         elif state=="avatar": state=avatar()
         elif state=="game": state=game()
+        elif state == "settings": state = settings_menu()
 
 main()
