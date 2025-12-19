@@ -157,10 +157,79 @@ def level_select():
 
         pygame.display.flip()
         clock.tick(60)
+
+# --- menu water animation ---
+menu_waves = []
+menu_wave_timer = 0
+
 def menu():
+    global menu_wave_timer, menu_waves
+
+    # --- init water sparkles ---
+    if not hasattr(menu, "water_sparkles"):
+        menu.water_sparkles = []
+        for _ in range(25):
+            menu.water_sparkles.append([
+                random.randint(0, WIDTH),
+                random.randint(200, HEIGHT),
+                random.uniform(0.3, 1.0)
+            ])
+
     while True:
+        dt = clock.tick(60) / 1000.0
         mouse_pos = pygame.mouse.get_pos()
         screen.blit(menu_bg, (0, 0))
+
+        # --- water ripple animation ---
+        menu_wave_timer += dt
+
+        if menu_wave_timer > 1.2:
+            menu_wave_timer = 0
+            menu_waves.append({
+                "x": random.randint(200, WIDTH - 200),
+                "y": random.randint(250, HEIGHT - 200),
+                "r": 0,
+                "alpha": 120
+            })
+
+        for wave in menu_waves[:]:
+            wave["r"] += 15
+            wave["alpha"] -= 2
+
+            if wave["alpha"] <= 0:
+                menu_waves.remove(wave)
+                continue
+
+            surf = pygame.Surface((wave["r"]*2, wave["r"]*2), pygame.SRCALPHA)
+            pygame.draw.circle(
+                surf,
+                (220, 255, 255, wave["alpha"]),
+                (wave["r"], wave["r"]),
+                wave["r"],
+                2
+            )
+            screen.blit(surf, (wave["x"] - wave["r"], wave["y"] - wave["r"]))
+
+        # --- draw water sparkles ---
+        for s in menu.water_sparkles:
+            s[1] -= s[2]
+            if s[1] < 200:
+                s[1] = HEIGHT
+                s[0] = random.randint(0, WIDTH)
+
+            pygame.draw.circle(
+                screen,
+                (220, 255, 255),
+                (int(s[0]), int(s[1])),
+                2
+            )
+
+            pygame.draw.circle(
+                screen,
+                (220, 255, 255),
+                (int(s[0]), int(s[1])),
+                2
+            )
         
         btn_w, btn_h = 180, 55
         gap = 18
@@ -266,6 +335,7 @@ def settings_menu():
 
     while True:
         clock.tick(60)
+        dt = clock.get_time() / 1000
         
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
