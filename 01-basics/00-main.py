@@ -473,6 +473,23 @@ def game():
         frogs[selected_frog_index] if selected_frog_index is not None else frogs[0],
         (50, 50)
     )
+    # NIEUW: Obstakel afbeeldingen inladen
+    enemy_imgs = []
+    enemy_names = ["", "winter obstakel", "candy obstakel", "zomer obstakel", "halloween obstakel"]
+    
+    for name in enemy_names:
+        if name == "": 
+            enemy_imgs.append(None) # Level 1 heeft geen vijand
+            continue
+        try:
+            img = pygame.image.load(f"assets/images/{name}.png").convert_alpha()
+            # Schaal ze naar een mooi formaat, bijv. 45x45 pixels
+            enemy_imgs.append(pygame.transform.smoothscale(img, (45, 45)))
+        except:
+            # Fallback: als het plaatje mist, maken we een gekleurd vlakje
+            surf = pygame.Surface((45, 45), pygame.SRCALPHA)
+            pygame.draw.rect(surf, (255, 0, 0), (0, 0, 45, 45))
+            enemy_imgs.append(surf)
     lilypad_img_game = pygame.transform.smoothscale(
         pygame.image.load("assets/images/lilypad.png").convert_alpha(), (60, 26)
     )
@@ -498,6 +515,29 @@ def game():
             screen.blit(lilypad_img_game, (self.x, self.y))
 
     # NIEUW: collectible klavertje 
+    # NIEUW: Enemy klasse
+    class Enemy:
+        def __init__(self, x, y, level_idx):
+            self.x, self.y = x, y
+            self.level_idx = level_idx
+            # Snelheid: level 2 is traag, level 5 is heel snel
+            self.speed = 1.2 + (level_idx * 1.0) 
+            self.dir = 1
+            self.image = enemy_imgs[level_idx]
+
+        def update(self, scroll):
+            self.y += scroll
+            self.x += self.speed * self.dir
+            # Blijf binnen de rivierbreedte
+            if self.x < RIVER_X or self.x > RIVER_X + RIVER_W - 45:
+                self.dir *= -1
+
+        def rect(self):
+            return pygame.Rect(self.x, self.y, 40, 40) # Iets kleiner voor eerlijke collision
+
+        def draw(self):
+            if self.image:
+                screen.blit(self.image, (self.x, self.y))
     class CollectibleClover:
         def __init__(self, x, y):
             self.x, self.y = x, y
@@ -580,7 +620,9 @@ def game():
         random.randint(0, HEIGHT),
         random.uniform(0.5, 2)
     ] for _ in range(45)]
-
+# Voeg dit toe bij de andere variabelen (onder collect_clovers = [])
+    enemies = []
+    invincibility_timer = 0  # Om te voorkomen dat je alle levens in 1 klap verliest
     while True:
         clock.tick(60)
         
@@ -616,11 +658,43 @@ def game():
                 )
                 platforms.append(p)
 
-                # NIEUW: kans op klavertje
+                # Kans op klavertje
                 if random.random() < 0.35:
-                    collect_clovers.append(
-                        CollectibleClover(p.x + 17, p.y - 22)
-                    )
+                    collect_clovers.append(CollectibleClover(p.x + 17, p.y - 22))
+
+                # NIEUW: Kans op enemy vanaf Level 2 (index 1)
+                # De kans wordt groter per level
+                enemy_chance = 0.1 + (selected_level_index * 0.05)
+                if selected_level_index >= 1 and random.random() < enemy_chance:
+                    enemies.append(Enemy(RIVER_X + random.randint(0, 200), p.y - 50, selected_level_index))
+                if (not game_over) and (not paused):
+                  frog.move(pygame.key.get_pressed())
+                  frog.update(platforms)
+
+            # Update invincibility timer
+            if invincibility_timer > 0:
+                invincibility_timer -= 1
+
+            for p in platforms: p.y += SCROLL_SPEED
+            for c in collect_clovers: c.y += SCROLL_SPEED
+            
+            # NIEUW: Update vijanden
+            for en in enemies:
+                en.update(SCROLL_SPEED)
+
+            # Verwijder vijanden die uit beeld zijn
+            enemies = [en for en in enemies if en.y < HEIGHT + 50]
+            # (Bestaande code voor platforms en clovers behouden...)
+
+            # NIEUW: Check collision met vijanden
+            frog_rect = pygame.Rect(frog.x, frog.y, 50, 50)
+            for en in enemies[:]:
+                if frog_rect.colliderect(en.rect()) and invincibility_timer == 0:
+                    lives -= 1
+                    invincibility_timer = 60 # 1 seconde onkwetsbaar (bij 60 FPS)
+                    sfx.play("gameover") # Of een ander geluidje
+                    if lives <= 0:
+                        game_over = True    
 
             frog_rect = pygame.Rect(frog.x, frog.y, 50, 50)
             for c in collect_clovers[:]:
@@ -669,6 +743,13 @@ def game():
 
         for p in platforms: p.draw()
         for c in collect_clovers: c.draw()  # NIEUW
+        for p in platforms: p.draw()
+        for c in collect_clovers: c.draw()
+        for en in enemies: en.draw() # NIEUW: Teken de vijanden
+        
+        # Geef de kikker een knipper effect als hij geraakt is
+        if invincibility_timer % 10 < 5:
+            frog.draw()
         frog.draw()
 
         # LIVES linksboven (ongewijzigd)
