@@ -288,6 +288,25 @@ def draw_toggle_icon(screen, rect, is_muted, kind):
     pygame.draw.rect(screen, (40, 180, 60), rect, border_radius=14)
     pygame.draw.rect(screen, (255, 255, 255), rect, 3, border_radius=14)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     cx, cy = rect.center
 
     if kind == "sound":
