@@ -746,13 +746,38 @@ def game():
             screen.blit(clover_img, (10 + i * 30, 10))
 
         # SCORE rechtsboven (NIEUW)
-        score_txt = font_small.render(f"Score: {score}", True, (255, 255, 255))
-        screen.blit(score_txt, (WIDTH - score_txt.get_width() - 10, 10))
+        # --- SCORE on green leaf (top-right) ---
+        leaf_r = 22
+        gap_ui = 10 
+
+        leaf_x = pause_rect.left - gap_ui - leaf_r
+        leaf_y = pause_rect.centery
+
+        # shadow
+        pygame.draw.circle(screen, (10, 40, 20), (leaf_x + 2, leaf_y + 2), leaf_r)
+
+        # leaf body
+        pygame.draw.circle(screen, (70, 170, 90), (leaf_x, leaf_y), leaf_r)
+        pygame.draw.circle(screen, (60, 150, 80), (leaf_x - 6, leaf_y - 4), leaf_r - 6)
+
+        # border
+        pygame.draw.circle(screen, (255, 255, 255), (leaf_x, leaf_y), leaf_r, 2)
+
+        # score text centered
+        score_txt = font_small.render(str(score), True, (255, 255, 255))
+        screen.blit(
+            score_txt,
+            (leaf_x - score_txt.get_width() // 2, leaf_y - score_txt.get_height() // 2)
+        )
+    
         # PAUSE button 
         pause_w, pause_h = 28, 28
+        pause_margin_right = 10
+        pause_margin_top = 10
+
         pause_rect = pygame.Rect(
-            WIDTH - score_txt.get_width() - 10 - pause_w - 10,
-            8,
+            WIDTH - pause_w - pause_margin_right,
+            pause_margin_top, 
             pause_w,
             pause_h
         )
