@@ -167,10 +167,79 @@ def level_select():
 
         pygame.display.flip()
         clock.tick(60)
+
+# --- menu water animation ---
+menu_waves = []
+menu_wave_timer = 0
+
 def menu():
+    global menu_wave_timer, menu_waves
+
+    # --- init water sparkles ---
+    if not hasattr(menu, "water_sparkles"):
+        menu.water_sparkles = []
+        for _ in range(25):
+            menu.water_sparkles.append([
+                random.randint(0, WIDTH),
+                random.randint(200, HEIGHT),
+                random.uniform(0.3, 1.0)
+            ])
+
     while True:
+        dt = clock.tick(60) / 1000.0
         mouse_pos = pygame.mouse.get_pos()
         screen.blit(menu_bg, (0, 0))
+
+        # --- water ripple animation ---
+        menu_wave_timer += dt
+
+        if menu_wave_timer > 1.2:
+            menu_wave_timer = 0
+            menu_waves.append({
+                "x": random.randint(200, WIDTH - 200),
+                "y": random.randint(250, HEIGHT - 200),
+                "r": 0,
+                "alpha": 120
+            })
+
+        for wave in menu_waves[:]:
+            wave["r"] += 15
+            wave["alpha"] -= 2
+
+            if wave["alpha"] <= 0:
+                menu_waves.remove(wave)
+                continue
+
+            surf = pygame.Surface((wave["r"]*2, wave["r"]*2), pygame.SRCALPHA)
+            pygame.draw.circle(
+                surf,
+                (220, 255, 255, wave["alpha"]),
+                (wave["r"], wave["r"]),
+                wave["r"],
+                2
+            )
+            screen.blit(surf, (wave["x"] - wave["r"], wave["y"] - wave["r"]))
+
+        # --- draw water sparkles ---
+        for s in menu.water_sparkles:
+            s[1] -= s[2]
+            if s[1] < 200:
+                s[1] = HEIGHT
+                s[0] = random.randint(0, WIDTH)
+
+            pygame.draw.circle(
+                screen,
+                (220, 255, 255),
+                (int(s[0]), int(s[1])),
+                2
+            )
+
+            pygame.draw.circle(
+                screen,
+                (220, 255, 255),
+                (int(s[0]), int(s[1])),
+                2
+            )
         
         btn_w, btn_h = 180, 55
         gap = 18
@@ -276,6 +345,7 @@ def settings_menu():
 
     while True:
         clock.tick(60)
+        dt = clock.get_time() / 1000
         
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
@@ -468,6 +538,11 @@ def game():
     SCROLL_SPEED = 0
     MAX_LIVES = 5
 
+    paused = False
+    pause_buttons = {}
+
+
+
     # ASSETS
     frog_img = pygame.transform.smoothscale(
         frogs[selected_frog_index] if selected_frog_index is not None else frogs[0],
@@ -591,6 +666,27 @@ def game():
         def draw(self):
             screen.blit(frog_img, (self.x, self.y))
 
+    # ===== FALLING LEAF CLASS =====
+    class FallingLeaf:
+        def __init__(self):
+            self.x = random.randint(0, WIDTH)
+            self.y = random.randint(-200, -50)
+            self.speed_y = random.uniform(2, 4)
+            self.speed_x = random.uniform(-1, 1)
+            self.rotation = random.randint(0, 360)
+            self.rot_speed = random.uniform(-2, 2)
+
+        def update(self):
+            self.y += self.speed_y
+            self.x += math.sin(pygame.time.get_ticks() * 0.005) + self.speed_x
+            self.rotation += self.rot_speed
+
+        def draw(self):
+            leaf_surf = pygame.Surface((15, 8), pygame.SRCALPHA)
+            pygame.draw.ellipse(leaf_surf, (34, 100, 34), (0, 0, 15, 8))
+            rotated_leaf = pygame.transform.rotate(leaf_surf, self.rotation)
+            screen.blit(rotated_leaf, (self.x, self.y))
+
     def draw_bottom_bridge():
         y = HEIGHT - BRIDGE_HEIGHT
         pygame.draw.rect(screen, (120, 80, 40), (0, y, WIDTH, BRIDGE_HEIGHT))
@@ -608,11 +704,20 @@ def game():
     collect_clovers = []
     score = 0
     paused = False
+
+    # ===== BLADEREN SETUP =====
+    falling_leaves = []
+    leaf_timer_start = pygame.time.get_ticks()
+    show_leaves = (selected_level_index == 0)  # alleen natuur level
+
     pause_rect = pygame.Rect(WIDTH - 140, 40, 120, 35)
     scored_platforms = set ()
 
     font_big = pygame.font.SysFont("Trebuchet MS", 36, bold=True)
     font_small = pygame.font.SysFont("Trebuchet MS", 18)
+
+    pause_rect = pygame.Rect(WIDTH - 60, 10, 40, 40)
+
 
     # RIPPLE EFFECT
     ripples = [[
@@ -631,8 +736,26 @@ def game():
                 return "menu"
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-             if pause_rect.collidepoint(event.pos):
-                 paused = not paused
+    # pauze openen
+                if pause_rect.collidepoint(event.pos) and not paused:
+                 paused = True
+
+    # pause-menu knoppen
+                if paused and pause_buttons:
+                   if pause_buttons["continue"].collidepoint(event.pos):
+                      paused = False
+
+                   elif pause_buttons["restart"].collidepoint(event.pos):
+                     lives, score = MAX_LIVES, 0
+                     game_over = False
+                     gameover_played = False
+                     frog.reset()
+                     collect_clovers.clear()
+                     paused = False
+     
+                   elif pause_buttons["quit"].collidepoint(event.pos):
+                       return "menu"
+
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r and game_over:
                 lives, game_over, score = MAX_LIVES, False, 0
@@ -711,6 +834,22 @@ def game():
                     if not gameover_played:
                         sfx.play("gameover")
                         gameover_played = True
+        # ===== BLADEREN LOGICA =====
+        current_time = pygame.time.get_ticks()
+
+        # Stop na 1 seconde
+        if show_leaves and current_time - leaf_timer_start > 1000:
+          show_leaves = False
+
+        # Nieuwe blaadjes maken
+        if show_leaves and len(falling_leaves) < 15:
+           falling_leaves.append(FallingLeaf())
+
+        # Update bladeren
+        for leaf in falling_leaves[:]:
+            leaf.update()
+            if leaf.y > HEIGHT:
+                falling_leaves.remove(leaf)
 
         # ACHTERGROND (Gebruik gekozen level, anders de standaard rivier)
         if selected_level_img:
@@ -751,6 +890,11 @@ def game():
         if invincibility_timer % 10 < 5:
             frog.draw()
         frog.draw()
+
+        # ===== TEKEN BLADEREN BOVENOP =====
+        for leaf in falling_leaves:
+            leaf.draw()
+
 
         # LIVES linksboven (ongewijzigd)
         for i in range(lives):
@@ -802,6 +946,51 @@ def game():
                 (pause_rect.x + 21, pause_rect.y + 14),
             ])  
         draw_bottom_bridge()
+
+# ===== PAUSE MENU =====
+        if paused:
+            pause_buttons.clear()
+
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160))
+            screen.blit(overlay, (0, 0))
+
+            box_w, box_h = 300, 230
+            box = pygame.Rect(
+                WIDTH // 2 - box_w // 2,
+                HEIGHT // 2 - box_h // 2,
+                box_w,
+                box_h
+            )
+
+            pygame.draw.rect(screen, (30, 30, 30), box, border_radius=20)
+            pygame.draw.rect(screen, (255, 255, 255), box, 3, border_radius=20)
+
+            title = font_big.render("Paused", True, (255, 255, 255))
+            screen.blit(
+                title,
+                (box.centerx - title.get_width() // 2, box.y + 20)
+            )
+
+            mouse_pos = pygame.mouse.get_pos()
+
+            button_x = box.centerx - 55  # 110 / 2
+
+            pause_buttons["continue"] = draw_button(
+            button_x, box.y + 70, "CONTINUE", mouse_pos
+            )
+            pause_buttons["restart"] = draw_button(
+            button_x, box.y + 125, "RESTART", mouse_pos
+            )  
+            pause_buttons["quit"] = draw_button(
+            button_x, box.y + 180, "QUIT", mouse_pos
+            )
+
+
+
+
+        pygame.display.flip()
+
 
         if game_over:
             # donkere overlay
