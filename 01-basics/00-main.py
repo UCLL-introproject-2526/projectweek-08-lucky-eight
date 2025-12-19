@@ -538,6 +538,11 @@ def game():
     SCROLL_SPEED = 0
     MAX_LIVES = 5
 
+    paused = False
+    pause_buttons = {}
+
+
+
     # ASSETS
     frog_img = pygame.transform.smoothscale(
         frogs[selected_frog_index] if selected_frog_index is not None else frogs[0],
@@ -644,6 +649,9 @@ def game():
     font_big = pygame.font.SysFont("Trebuchet MS", 36, bold=True)
     font_small = pygame.font.SysFont("Trebuchet MS", 18)
 
+    pause_rect = pygame.Rect(WIDTH - 60, 10, 40, 40)
+
+
     # RIPPLE EFFECT
     ripples = [[
         random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40),
@@ -659,8 +667,26 @@ def game():
                 return "menu"
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-             if pause_rect.collidepoint(event.pos):
-                 paused = not paused
+    # pauze openen
+                if pause_rect.collidepoint(event.pos) and not paused:
+                 paused = True
+
+    # pause-menu knoppen
+                if paused and pause_buttons:
+                   if pause_buttons["continue"].collidepoint(event.pos):
+                      paused = False
+
+                   elif pause_buttons["restart"].collidepoint(event.pos):
+                     lives, score = MAX_LIVES, 0
+                     game_over = False
+                     gameover_played = False
+                     frog.reset()
+                     collect_clovers.clear()
+                     paused = False
+     
+                   elif pause_buttons["quit"].collidepoint(event.pos):
+                       return "menu"
+
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r and game_over:
                 lives, game_over, score = MAX_LIVES, False, 0
@@ -816,6 +842,51 @@ def game():
                 (pause_rect.x + 21, pause_rect.y + 14),
             ])  
         draw_bottom_bridge()
+
+# ===== PAUSE MENU =====
+        if paused:
+            pause_buttons.clear()
+
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160))
+            screen.blit(overlay, (0, 0))
+
+            box_w, box_h = 300, 230
+            box = pygame.Rect(
+                WIDTH // 2 - box_w // 2,
+                HEIGHT // 2 - box_h // 2,
+                box_w,
+                box_h
+            )
+
+            pygame.draw.rect(screen, (30, 30, 30), box, border_radius=20)
+            pygame.draw.rect(screen, (255, 255, 255), box, 3, border_radius=20)
+
+            title = font_big.render("Paused", True, (255, 255, 255))
+            screen.blit(
+                title,
+                (box.centerx - title.get_width() // 2, box.y + 20)
+            )
+
+            mouse_pos = pygame.mouse.get_pos()
+
+            button_x = box.centerx - 55  # 110 / 2
+
+            pause_buttons["continue"] = draw_button(
+            button_x, box.y + 70, "CONTINUE", mouse_pos
+            )
+            pause_buttons["restart"] = draw_button(
+            button_x, box.y + 125, "RESTART", mouse_pos
+            )  
+            pause_buttons["quit"] = draw_button(
+            button_x, box.y + 180, "QUIT", mouse_pos
+            )
+
+
+
+
+        pygame.display.flip()
+
 
         if game_over:
             # donkere overlay
