@@ -567,6 +567,23 @@ def game():
         frogs[selected_frog_index] if selected_frog_index is not None else frogs[0],
         (50, 50)
     )
+    # NIEUW: Obstakel afbeeldingen inladen
+    enemy_imgs = []
+    enemy_names = ["", "winter obstakel", "candy obstakel", "zomer obstakel", "halloween obstakel"]
+    
+    for name in enemy_names:
+        if name == "": 
+            enemy_imgs.append(None) # Level 1 heeft geen vijand
+            continue
+        try:
+            img = pygame.image.load(f"assets/images/{name}.png").convert_alpha()
+            # Schaal ze naar een mooi formaat, bijv. 45x45 pixels
+            enemy_imgs.append(pygame.transform.smoothscale(img, (45, 45)))
+        except:
+            # Fallback: als het plaatje mist, maken we een gekleurd vlakje
+            surf = pygame.Surface((45, 45), pygame.SRCALPHA)
+            pygame.draw.rect(surf, (255, 0, 0), (0, 0, 45, 45))
+            enemy_imgs.append(surf)
     lilypad_img_game = pygame.transform.smoothscale(
         pygame.image.load("assets/images/lilypad.png").convert_alpha(), (60, 26)
     )
@@ -592,6 +609,29 @@ def game():
             screen.blit(lilypad_img_game, (self.x, self.y))
 
     # NIEUW: collectible klavertje 
+    # NIEUW: Enemy klasse
+    class Enemy:
+        def __init__(self, x, y, level_idx):
+            self.x, self.y = x, y
+            self.level_idx = level_idx
+            # Snelheid: level 2 is traag, level 5 is heel snel
+            self.speed = 1.2 + (level_idx * 1.0) 
+            self.dir = 1
+            self.image = enemy_imgs[level_idx]
+
+        def update(self, scroll):
+            self.y += scroll
+            self.x += self.speed * self.dir
+            # Blijf binnen de rivierbreedte
+            if self.x < RIVER_X or self.x > RIVER_X + RIVER_W - 45:
+                self.dir *= -1
+
+        def rect(self):
+            return pygame.Rect(self.x, self.y, 40, 40) # Iets kleiner voor eerlijke collision
+
+        def draw(self):
+            if self.image:
+                screen.blit(self.image, (self.x, self.y))
     class CollectibleClover:
         def __init__(self, x, y):
             self.x, self.y = x, y
@@ -645,6 +685,27 @@ def game():
         def draw(self):
             screen.blit(frog_img, (self.x, self.y))
 
+    # ===== FALLING LEAF CLASS =====
+    class FallingLeaf:
+        def __init__(self):
+            self.x = random.randint(0, WIDTH)
+            self.y = random.randint(-200, -50)
+            self.speed_y = random.uniform(2, 4)
+            self.speed_x = random.uniform(-1, 1)
+            self.rotation = random.randint(0, 360)
+            self.rot_speed = random.uniform(-2, 2)
+
+        def update(self):
+            self.y += self.speed_y
+            self.x += math.sin(pygame.time.get_ticks() * 0.005) + self.speed_x
+            self.rotation += self.rot_speed
+
+        def draw(self):
+            leaf_surf = pygame.Surface((15, 8), pygame.SRCALPHA)
+            pygame.draw.ellipse(leaf_surf, (34, 100, 34), (0, 0, 15, 8))
+            rotated_leaf = pygame.transform.rotate(leaf_surf, self.rotation)
+            screen.blit(rotated_leaf, (self.x, self.y))
+
     def draw_bottom_bridge():
         y = HEIGHT - BRIDGE_HEIGHT
         pygame.draw.rect(screen, (120, 80, 40), (0, y, WIDTH, BRIDGE_HEIGHT))
@@ -662,6 +723,12 @@ def game():
     collect_clovers = []
     score = 0
     paused = False
+
+    # ===== BLADEREN SETUP =====
+    falling_leaves = []
+    leaf_timer_start = pygame.time.get_ticks()
+    show_leaves = (selected_level_index == 0)  # alleen natuur level
+
     pause_rect = pygame.Rect(WIDTH - 140, 40, 120, 35)
     scored_platforms = set ()
 
@@ -677,7 +744,9 @@ def game():
         random.randint(0, HEIGHT),
         random.uniform(0.5, 2)
     ] for _ in range(45)]
-
+# Voeg dit toe bij de andere variabelen (onder collect_clovers = [])
+    enemies = []
+    invincibility_timer = 0  # Om te voorkomen dat je alle levens in 1 klap verliest
     while True:
         clock.tick(60)
         
@@ -731,11 +800,40 @@ def game():
                 )
                 platforms.append(p)
 
-                # NIEUW: kans op klavertje
+                # Kans op klavertje
                 if random.random() < 0.35:
-                    collect_clovers.append(
-                        CollectibleClover(p.x + 17, p.y - 22)
-                    )
+                    collect_clovers.append(CollectibleClover(p.x + 17, p.y - 22))
+
+                # NIEUW: Kans op enemy vanaf Level 2 (index 1)
+                # De kans wordt groter per level
+                enemy_chance = 0.1 + (selected_level_index * 0.05)
+                if selected_level_index >= 1 and random.random() < enemy_chance:
+                    enemies.append(Enemy(RIVER_X + random.randint(0, 200), p.y - 50, selected_level_index))
+                
+            # Update invincibility timer
+            if invincibility_timer > 0:
+                invincibility_timer -= 1
+
+            for p in platforms: p.y += SCROLL_SPEED
+            for c in collect_clovers: c.y += SCROLL_SPEED
+            
+            # NIEUW: Update vijanden
+            for en in enemies:
+                en.update(SCROLL_SPEED)
+
+            # Verwijder vijanden die uit beeld zijn
+            enemies = [en for en in enemies if en.y < HEIGHT + 50]
+            # (Bestaande code voor platforms en clovers behouden...)
+
+            # NIEUW: Check collision met vijanden
+            frog_rect = pygame.Rect(frog.x, frog.y, 50, 50)
+            for en in enemies[:]:
+                if frog_rect.colliderect(en.rect()) and invincibility_timer == 0:
+                    lives -= 1
+                    invincibility_timer = 60 # 1 seconde onkwetsbaar (bij 60 FPS)
+                    sfx.play("gameover") # Of een ander geluidje
+                    if lives <= 0:
+                        game_over = True    
 
             frog_rect = pygame.Rect(frog.x, frog.y, 50, 50)
             for c in collect_clovers[:]:
@@ -752,6 +850,22 @@ def game():
                     if not gameover_played:
                         sfx.play("gameover")
                         gameover_played = True
+        # ===== BLADEREN LOGICA =====
+        current_time = pygame.time.get_ticks()
+
+        # Stop na 1 seconde
+        if show_leaves and current_time - leaf_timer_start > 1000:
+          show_leaves = False
+
+        # Nieuwe blaadjes maken
+        if show_leaves and len(falling_leaves) < 15:
+           falling_leaves.append(FallingLeaf())
+
+        # Update bladeren
+        for leaf in falling_leaves[:]:
+            leaf.update()
+            if leaf.y > HEIGHT:
+                falling_leaves.remove(leaf)
 
         # ACHTERGROND (Gebruik gekozen level, anders de standaard rivier)
         if selected_level_img:
@@ -784,7 +898,19 @@ def game():
 
         for p in platforms: p.draw()
         for c in collect_clovers: c.draw()  # NIEUW
+        for p in platforms: p.draw()
+        for c in collect_clovers: c.draw()
+        for en in enemies: en.draw() # NIEUW: Teken de vijanden
+        
+        # Geef de kikker een knipper effect als hij geraakt is
+        if invincibility_timer % 10 < 5:
+            frog.draw()
         frog.draw()
+
+        # ===== TEKEN BLADEREN BOVENOP =====
+        for leaf in falling_leaves:
+            leaf.draw()
+
 
         # LIVES linksboven (ongewijzigd)
         for i in range(lives):
@@ -900,11 +1026,6 @@ def game():
             pause_buttons["quit"] = draw_button(
             button_x, box.y + 180, "QUIT", mouse_pos
             )
-
-
-
-
-        pygame.display.flip()
 
 
         if game_over:
