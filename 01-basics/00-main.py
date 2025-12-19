@@ -4,6 +4,16 @@ import math
 import sys
 import audio
 
+# ===== WATER & RIPPLE KLEUREN PER LEVEL =====
+LEVEL_WATER = {
+    0: (120, 200, 215),  # level 1 – natuur
+    1: (170, 220, 240),  # level 2 – winter
+    2: (255, 215, 225),  # level 3 – candy
+    3: (180, 245, 235),  # level 4 – zomer
+    4: (170, 120, 210),  # level 5 – halloween
+}
+
+
 # ===== GLOBAL SETTINGS =====
 music_muted = False
 sound_muted = False
@@ -78,7 +88,7 @@ jump_sfx.set_volume(0.5)
 land_sfx.set_volume(0.5)
 gameover_sfx.set_volume(0.6)
 
-# 👉 DE NIEUWE GAME ACHTERGROND
+# DE NIEUWE GAME ACHTERGROND
 # ================= GAME OVER IMAGES =================
 game_over_images = []
 
@@ -313,7 +323,7 @@ def settings_menu():
 
         pygame.display.flip()
 
-# ================= AVATAR (ONGEWIJZIGD) =================
+# ================= AVATAR =================
 random.seed(42)
 glow_timer = 0
 grass_texture = []
@@ -634,18 +644,28 @@ def game():
         else:
             screen.blit(game_bg_img, (0, 0))
 
-        # RIPPLE
+        # RIPPLE (kleur per level)
+        ripple_color = LEVEL_WATER.get(selected_level_index, (100, 190, 230))
+
         for r in ripples:
             r[1] += r[2] + SCROLL_SPEED * 0.3
+
             if r[1] > HEIGHT + 10:
-                r[1] = -10
-                r[0] = random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40)
-            offset = math.sin(pygame.time.get_ticks() * 0.005 + r[1]) * 3
+               r[1] = -10
+               r[0] = random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40)
+  
+            offset = math.sin(
+                pygame.time.get_ticks() * 0.004 + r[1] * 0.15
+            ) * 4
+
             pygame.draw.line(
-                screen, (100, 190, 230),
+                screen,
+                ripple_color,
                 (r[0] + offset, r[1]),
-                (r[0] + 30 + offset, r[1]), 2
+                (r[0] + 30 + offset, r[1]),
+                 2
             )
+
 
         for p in platforms: p.draw()
         for c in collect_clovers: c.draw()  # NIEUW
