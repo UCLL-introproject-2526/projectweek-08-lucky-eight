@@ -4,6 +4,16 @@ import math
 import sys
 import audio
 
+# ===== WATER & RIPPLE KLEUREN PER LEVEL =====
+LEVEL_WATER = {
+    0: (120, 200, 215),  # level 1 – natuur
+    1: (170, 220, 240),  # level 2 – winter
+    2: (255, 215, 225),  # level 3 – candy
+    3: (180, 245, 235),  # level 4 – zomer
+    4: (170, 120, 210),  # level 5 – halloween
+}
+
+
 # ===== GLOBAL SETTINGS =====
 music_muted = False
 sound_muted = False
@@ -36,7 +46,7 @@ button_font = pygame.font.SysFont("Trebuchet MS", 20, bold=True)
 # Level Select achtergrond inladen
 try:
     level_select_bg = pygame.transform.scale(
-        pygame.image.load("assets/select level background.png").convert(),
+        pygame.image.load("assets/images/select level background.png").convert(),
         (WIDTH, HEIGHT)
     )
 except:
@@ -47,7 +57,7 @@ except:
 level_backgrounds = []
 for i in range(1, 6):
     try:
-        img = pygame.transform.scale(pygame.image.load(f"assets/level {i} background.png").convert(), (WIDTH, HEIGHT))
+        img = pygame.transform.scale(pygame.image.load(f"assets/images/level {i} background.png").convert(), (WIDTH, HEIGHT))
         level_backgrounds.append(img)
     except:
         # Fallback kleur als het plaatje mist
@@ -56,7 +66,7 @@ for i in range(1, 6):
         level_backgrounds.append(surf)
 # Menu achtergrond
 menu_bg = pygame.transform.scale(
-    pygame.image.load("assets/lucky jump menu.png").convert(),
+    pygame.image.load("assets/images/lucky jump menu.png").convert(),
     (WIDTH, HEIGHT)
 )
 
@@ -78,17 +88,17 @@ jump_sfx.set_volume(0.5)
 land_sfx.set_volume(0.5)
 gameover_sfx.set_volume(0.6)
 
-# 👉 DE NIEUWE GAME ACHTERGROND
+# DE NIEUWE GAME ACHTERGROND
 # ================= GAME OVER IMAGES =================
 game_over_images = []
 
 try:
     game_over_images = [
-        pygame.image.load("assets/game over.png").convert_alpha(),          # level 1 (groen)
-        pygame.image.load("assets/game over (winter).png").convert_alpha(), # level 2 (blauw)
-        pygame.image.load("assets/game over (candy).png").convert_alpha(),  # level 3 (roze)
-        pygame.image.load("assets/game over (zomer).png").convert_alpha(), # level 4 (geel)
-        pygame.image.load("assets/game over (halloween).png").convert_alpha(),  # level 5 (paars)
+        pygame.image.load("assets/images/game over.png").convert_alpha(),          # level 1 (groen)
+        pygame.image.load("assets/images/game over (winter).png").convert_alpha(), # level 2 (blauw)
+        pygame.image.load("assets/images/game over (candy).png").convert_alpha(),  # level 3 (roze)
+        pygame.image.load("assets/images/game over (zomer).png").convert_alpha(), # level 4 (geel)
+        pygame.image.load("assets/images/game over (halloween).png").convert_alpha(),  # level 5 (paars)
     ]
 
     game_over_images = [
@@ -100,7 +110,7 @@ except:
 
 try:
     game_bg_img = pygame.transform.scale(
-        pygame.image.load("assets/gameriver.png").convert(),
+        pygame.image.load("assets/images/gameriver.png").convert(),
         (WIDTH, HEIGHT)
     )
 except:
@@ -383,7 +393,7 @@ def settings_menu():
 
         pygame.display.flip()
 
-# ================= AVATAR (ONGEWIJZIGD) =================
+# ================= AVATAR =================
 random.seed(42)
 glow_timer = 0
 grass_texture = []
@@ -453,11 +463,11 @@ def draw_selection_arrow(surface, x, y, color):
     pygame.draw.polygon(surface, (255,255,255), points, 2)
 
 # ================= ASSETS (AVATAR) =================
-frog_orig = pygame.transform.smoothscale(pygame.image.load("assets/frog.png").convert_alpha(), (85,85))
-lilypad_img = pygame.transform.smoothscale(pygame.image.load("assets/lilypad.png").convert_alpha(), (85,40))
-bush_img = pygame.transform.smoothscale(pygame.image.load("assets/bushes.png").convert_alpha(), (75,60))
-yellow_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/yellowflower.png").convert_alpha(), (22,22))
-orange_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/orangeflower.png").convert_alpha(), (22,22))
+frog_orig = pygame.transform.smoothscale(pygame.image.load("assets/images/frog.png").convert_alpha(), (85,85))
+lilypad_img = pygame.transform.smoothscale(pygame.image.load("assets/images/lilypad.png").convert_alpha(), (85,40))
+bush_img = pygame.transform.smoothscale(pygame.image.load("assets/images/bushes.png").convert_alpha(), (75,60))
+yellow_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/images/yellowflower.png").convert_alpha(), (22,22))
+orange_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/images/orangeflower.png").convert_alpha(), (22,22))
 
 generate_decorations()
 frog_colors = [(30,30,30),(180,20,20),(20,60,180),(180,180,20),(160,20,160)]
@@ -534,12 +544,12 @@ def game():
         (50, 50)
     )
     lilypad_img_game = pygame.transform.smoothscale(
-        pygame.image.load("assets/lilypad.png").convert_alpha(), (60, 26)
+        pygame.image.load("assets/images/lilypad.png").convert_alpha(), (60, 26)
     )
 
     try:
         clover_img = pygame.transform.smoothscale(
-            pygame.image.load("assets/clover.png").convert_alpha(), (26, 26)
+            pygame.image.load("assets/images/clover.png").convert_alpha(), (26, 26)
         )
         tint = pygame.Surface(clover_img.get_size(), pygame.SRCALPHA)
         tint.fill((0, 220, 0, 255))
@@ -570,12 +580,12 @@ def game():
         def __init__(self):
             self.reset ()
         def reset(self):
+            # We zetten hem in het midden van de rivier
             self.x = WIDTH // 2 - 25
-            self.y = HEIGHT - 80
-            self.vel_y = 0
+            # We zetten hem onderaan, maar we geven hem een flinke sprong omhoog
+            self.y = HEIGHT - 100 
+            self.vel_y = -16  # Dit geeft hem een automatische 'super jump' bij de start
             self.on_platform = False
-            self.last_platform = None
-            self.just_landed = False
         def move(self, keys):
             if keys[pygame.K_LEFT]: self.x -= MOVE_SPEED
             if keys[pygame.K_RIGHT]: self.x += MOVE_SPEED
@@ -688,15 +698,15 @@ def game():
                     collect_clovers.remove(c)
                     score += 5  # NIEUW
 
-            if frog.y > HEIGHT:
+            if frog.y > HEIGHT + 50: # Iets meer ruimte geven voor hij dood gaat
                 lives -= 1
-                if lives <= 0:
-                    game_over = True
-                if not gameover_played:
-                    sfx.play("gameover")
-                    gameover_played = True
+                if lives > 0:
+                    frog.reset() # Hij springt nu van onderen weer het scherm in
                 else:
-                    frog.reset()
+                    game_over = True
+                    if not gameover_played:
+                        sfx.play("gameover")
+                        gameover_played = True
 
         # ACHTERGROND (Gebruik gekozen level, anders de standaard rivier)
         if selected_level_img:
@@ -704,18 +714,28 @@ def game():
         else:
             screen.blit(game_bg_img, (0, 0))
 
-        # RIPPLE
+        # RIPPLE (kleur per level)
+        ripple_color = LEVEL_WATER.get(selected_level_index, (100, 190, 230))
+
         for r in ripples:
             r[1] += r[2] + SCROLL_SPEED * 0.3
+
             if r[1] > HEIGHT + 10:
-                r[1] = -10
-                r[0] = random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40)
-            offset = math.sin(pygame.time.get_ticks() * 0.005 + r[1]) * 3
+               r[1] = -10
+               r[0] = random.randint(RIVER_X + 10, RIVER_X + RIVER_W - 40)
+  
+            offset = math.sin(
+                pygame.time.get_ticks() * 0.004 + r[1] * 0.15
+            ) * 4
+
             pygame.draw.line(
-                screen, (100, 190, 230),
+                screen,
+                ripple_color,
                 (r[0] + offset, r[1]),
-                (r[0] + 30 + offset, r[1]), 2
+                (r[0] + 30 + offset, r[1]),
+                 2
             )
+
 
         for p in platforms: p.draw()
         for c in collect_clovers: c.draw()  # NIEUW
@@ -799,7 +819,7 @@ def game():
                 (240, 240, 240)
             )
              score_txt = font_small.render(
-                f"Final Score: {score}",
+                f"Highscore: {score}",
                 True,
                 (255, 255, 255)
             )
