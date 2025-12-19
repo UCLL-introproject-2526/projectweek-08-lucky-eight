@@ -46,7 +46,7 @@ button_font = pygame.font.SysFont("Trebuchet MS", 20, bold=True)
 # Level Select achtergrond inladen
 try:
     level_select_bg = pygame.transform.scale(
-        pygame.image.load("assets/select level background.png").convert(),
+        pygame.image.load("assets/images/select level background.png").convert(),
         (WIDTH, HEIGHT)
     )
 except:
@@ -57,7 +57,7 @@ except:
 level_backgrounds = []
 for i in range(1, 6):
     try:
-        img = pygame.transform.scale(pygame.image.load(f"assets/level {i} background.png").convert(), (WIDTH, HEIGHT))
+        img = pygame.transform.scale(pygame.image.load(f"assets/images/level {i} background.png").convert(), (WIDTH, HEIGHT))
         level_backgrounds.append(img)
     except:
         # Fallback kleur als het plaatje mist
@@ -66,7 +66,7 @@ for i in range(1, 6):
         level_backgrounds.append(surf)
 # Menu achtergrond
 menu_bg = pygame.transform.scale(
-    pygame.image.load("assets/lucky jump menu.png").convert(),
+    pygame.image.load("assets/images/lucky jump menu.png").convert(),
     (WIDTH, HEIGHT)
 )
 
@@ -94,11 +94,11 @@ game_over_images = []
 
 try:
     game_over_images = [
-        pygame.image.load("assets/game over.png").convert_alpha(),          # level 1 (groen)
-        pygame.image.load("assets/game over (winter).png").convert_alpha(), # level 2 (blauw)
-        pygame.image.load("assets/game over (candy).png").convert_alpha(),  # level 3 (roze)
-        pygame.image.load("assets/game over (zomer).png").convert_alpha(), # level 4 (geel)
-        pygame.image.load("assets/game over (halloween).png").convert_alpha(),  # level 5 (paars)
+        pygame.image.load("assets/images/game over.png").convert_alpha(),          # level 1 (groen)
+        pygame.image.load("assets/images/game over (winter).png").convert_alpha(), # level 2 (blauw)
+        pygame.image.load("assets/images/game over (candy).png").convert_alpha(),  # level 3 (roze)
+        pygame.image.load("assets/images/game over (zomer).png").convert_alpha(), # level 4 (geel)
+        pygame.image.load("assets/images/game over (halloween).png").convert_alpha(),  # level 5 (paars)
     ]
 
     game_over_images = [
@@ -110,7 +110,7 @@ except:
 
 try:
     game_bg_img = pygame.transform.scale(
-        pygame.image.load("assets/gameriver.png").convert(),
+        pygame.image.load("assets/images/gameriver.png").convert(),
         (WIDTH, HEIGHT)
     )
 except:
@@ -393,11 +393,11 @@ def draw_selection_arrow(surface, x, y, color):
     pygame.draw.polygon(surface, (255,255,255), points, 2)
 
 # ================= ASSETS (AVATAR) =================
-frog_orig = pygame.transform.smoothscale(pygame.image.load("assets/frog.png").convert_alpha(), (85,85))
-lilypad_img = pygame.transform.smoothscale(pygame.image.load("assets/lilypad.png").convert_alpha(), (85,40))
-bush_img = pygame.transform.smoothscale(pygame.image.load("assets/bushes.png").convert_alpha(), (75,60))
-yellow_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/yellowflower.png").convert_alpha(), (22,22))
-orange_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/orangeflower.png").convert_alpha(), (22,22))
+frog_orig = pygame.transform.smoothscale(pygame.image.load("assets/images/frog.png").convert_alpha(), (85,85))
+lilypad_img = pygame.transform.smoothscale(pygame.image.load("assets/images/lilypad.png").convert_alpha(), (85,40))
+bush_img = pygame.transform.smoothscale(pygame.image.load("assets/images/bushes.png").convert_alpha(), (75,60))
+yellow_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/images/yellowflower.png").convert_alpha(), (22,22))
+orange_flower_img = pygame.transform.smoothscale(pygame.image.load("assets/images/orangeflower.png").convert_alpha(), (22,22))
 
 generate_decorations()
 frog_colors = [(30,30,30),(180,20,20),(20,60,180),(180,180,20),(160,20,160)]
@@ -474,12 +474,12 @@ def game():
         (50, 50)
     )
     lilypad_img_game = pygame.transform.smoothscale(
-        pygame.image.load("assets/lilypad.png").convert_alpha(), (60, 26)
+        pygame.image.load("assets/images/lilypad.png").convert_alpha(), (60, 26)
     )
 
     try:
         clover_img = pygame.transform.smoothscale(
-            pygame.image.load("assets/clover.png").convert_alpha(), (26, 26)
+            pygame.image.load("assets/images/clover.png").convert_alpha(), (26, 26)
         )
         tint = pygame.Surface(clover_img.get_size(), pygame.SRCALPHA)
         tint.fill((0, 220, 0, 255))
@@ -749,7 +749,7 @@ def game():
                 (240, 240, 240)
             )
              score_txt = font_small.render(
-                f"Final Score: {score}",
+                f"Highscore: {score}",
                 True,
                 (255, 255, 255)
             )
