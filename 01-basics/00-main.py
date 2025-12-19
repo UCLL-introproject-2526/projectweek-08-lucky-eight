@@ -790,10 +790,7 @@ def game():
                 enemy_chance = 0.1 + (selected_level_index * 0.05)
                 if selected_level_index >= 1 and random.random() < enemy_chance:
                     enemies.append(Enemy(RIVER_X + random.randint(0, 200), p.y - 50, selected_level_index))
-                if (not game_over) and (not paused):
-                  frog.move(pygame.key.get_pressed())
-                  frog.update(platforms)
-
+                
             # Update invincibility timer
             if invincibility_timer > 0:
                 invincibility_timer -= 1
@@ -985,11 +982,6 @@ def game():
             pause_buttons["quit"] = draw_button(
             button_x, box.y + 180, "QUIT", mouse_pos
             )
-
-
-
-
-        pygame.display.flip()
 
 
         if game_over:
