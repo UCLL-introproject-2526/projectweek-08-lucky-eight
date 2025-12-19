@@ -626,6 +626,27 @@ def game():
         def draw(self):
             screen.blit(frog_img, (self.x, self.y))
 
+    # ===== FALLING LEAF CLASS =====
+    class FallingLeaf:
+        def __init__(self):
+            self.x = random.randint(0, WIDTH)
+            self.y = random.randint(-200, -50)
+            self.speed_y = random.uniform(2, 4)
+            self.speed_x = random.uniform(-1, 1)
+            self.rotation = random.randint(0, 360)
+            self.rot_speed = random.uniform(-2, 2)
+
+        def update(self):
+            self.y += self.speed_y
+            self.x += math.sin(pygame.time.get_ticks() * 0.005) + self.speed_x
+            self.rotation += self.rot_speed
+
+        def draw(self):
+            leaf_surf = pygame.Surface((15, 8), pygame.SRCALPHA)
+            pygame.draw.ellipse(leaf_surf, (34, 100, 34), (0, 0, 15, 8))
+            rotated_leaf = pygame.transform.rotate(leaf_surf, self.rotation)
+            screen.blit(rotated_leaf, (self.x, self.y))
+
     def draw_bottom_bridge():
         y = HEIGHT - BRIDGE_HEIGHT
         pygame.draw.rect(screen, (120, 80, 40), (0, y, WIDTH, BRIDGE_HEIGHT))
@@ -643,6 +664,12 @@ def game():
     collect_clovers = []
     score = 0
     paused = False
+
+    # ===== BLADEREN SETUP =====
+    falling_leaves = []
+    leaf_timer_start = pygame.time.get_ticks()
+    show_leaves = (selected_level_index == 0)  # alleen natuur level
+
     pause_rect = pygame.Rect(WIDTH - 140, 40, 120, 35)
     scored_platforms = set ()
 
@@ -733,6 +760,22 @@ def game():
                     if not gameover_played:
                         sfx.play("gameover")
                         gameover_played = True
+        # ===== BLADEREN LOGICA =====
+        current_time = pygame.time.get_ticks()
+
+        # Stop na 1 seconde
+        if show_leaves and current_time - leaf_timer_start > 1000:
+          show_leaves = False
+
+        # Nieuwe blaadjes maken
+        if show_leaves and len(falling_leaves) < 15:
+           falling_leaves.append(FallingLeaf())
+
+        # Update bladeren
+        for leaf in falling_leaves[:]:
+            leaf.update()
+            if leaf.y > HEIGHT:
+                falling_leaves.remove(leaf)
 
         # ACHTERGROND (Gebruik gekozen level, anders de standaard rivier)
         if selected_level_img:
@@ -766,6 +809,11 @@ def game():
         for p in platforms: p.draw()
         for c in collect_clovers: c.draw()  # NIEUW
         frog.draw()
+
+        # ===== TEKEN BLADEREN BOVENOP =====
+        for leaf in falling_leaves:
+            leaf.draw()
+
 
         # LIVES linksboven (ongewijzigd)
         for i in range(lives):
