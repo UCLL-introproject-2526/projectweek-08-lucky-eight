@@ -510,12 +510,12 @@ def game():
         def __init__(self):
             self.reset ()
         def reset(self):
+            # We zetten hem in het midden van de rivier
             self.x = WIDTH // 2 - 25
-            self.y = HEIGHT - 80
-            self.vel_y = 0
+            # We zetten hem onderaan, maar we geven hem een flinke sprong omhoog
+            self.y = HEIGHT - 100 
+            self.vel_y = -16  # Dit geeft hem een automatische 'super jump' bij de start
             self.on_platform = False
-            self.last_platform = None
-            self.just_landed = False
         def move(self, keys):
             if keys[pygame.K_LEFT]: self.x -= MOVE_SPEED
             if keys[pygame.K_RIGHT]: self.x += MOVE_SPEED
@@ -628,15 +628,15 @@ def game():
                     collect_clovers.remove(c)
                     score += 5  # NIEUW
 
-            if frog.y > HEIGHT:
+            if frog.y > HEIGHT + 50: # Iets meer ruimte geven voor hij dood gaat
                 lives -= 1
-                if lives <= 0:
-                    game_over = True
-                if not gameover_played:
-                    sfx.play("gameover")
-                    gameover_played = True
+                if lives > 0:
+                    frog.reset() # Hij springt nu van onderen weer het scherm in
                 else:
-                    frog.reset()
+                    game_over = True
+                    if not gameover_played:
+                        sfx.play("gameover")
+                        gameover_played = True
 
         # ACHTERGROND (Gebruik gekozen level, anders de standaard rivier)
         if selected_level_img:
